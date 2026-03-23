@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "user-service/internal/grpc/user;user";
+
+service UserService {
+  rpc CreateUser(CreateUserRequest) returns (UserResponse);
+  rpc GetUser(GetUserRequest) returns (UserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UserResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+}
+
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+}
+
+message GetUserRequest {
+  int64 id = 1;
+}
+
+message UpdateUserRequest {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message DeleteUserRequest {
+  int64 id = 1;
+}
+
+message UserResponse {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message DeleteUserResponse {
+  string message = 1;
+}

@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
+    networks:
+      - minibank-net
+
+  redis:
+    image: redis:7
+    container_name: minibank-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - minibank-net
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    environment:
+      DATABASE_URL: postgres://user:pass@postgres:5432/auth_db?sslmode=disable
+      REDIS_ADDR: redis:6379
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "50051:50051"
+    networks:
+      - minibank-net
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    environment:
+      DATABASE_URL: postgres://user:pass@postgres:5432/user_db?sslmode=disable
+    depends_on:
+      - postgres
+    ports:
+      - "50052:50052"
+    networks:
+      - minibank-net
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    environment:
+      DATABASE_URL: postgres://user:pass@postgres:5432/payment_db?sslmode=disable
+    depends_on:
+      - postgres
+    ports:
+      - "50053:50053"
+    networks:
+      - minibank-net
+
+volumes:
+  pgdata:
+
+networks:
+  minibank-net:
