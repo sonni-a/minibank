@@ -3,10 +3,11 @@ package main
 import (
 	"log"
 	"net"
+	"os"
 
-	"github.com/sonni-a/minibank/auth-service/internal/db"
 	"github.com/sonni-a/minibank/auth-service/internal/grpc/auth"
 	"github.com/sonni-a/minibank/auth-service/internal/service"
+	"github.com/sonni-a/minibank/pkg/db"
 	"github.com/sonni-a/minibank/pkg/migrate"
 	pkgredis "github.com/sonni-a/minibank/pkg/redis"
 
@@ -15,11 +16,12 @@ import (
 )
 
 func main() {
-	dbConn := db.Connect("postgres://user:pass@postgres:5432/auth_db?sslmode=disable")
+	dbConn := db.Connect()
+	defer dbConn.Close()
 
 	migrate.Run(dbConn, "file://auth-service/internal/db/migrations")
 
-	rdb := pkgredis.ConnectRedis("redis:6379")
+	rdb := pkgredis.ConnectRedis(os.Getenv("REDIS_ADDR"))
 	defer func() {
 		if err := rdb.Close(); err != nil {
 			log.Println("Error closing Redis:", err)
@@ -35,11 +37,9 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 	auth.RegisterAuthServiceServer(grpcServer, authService)
-
 	reflection.Register(grpcServer)
 
 	log.Println("Auth Service running on :50051")
-
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatal(err)
 	}

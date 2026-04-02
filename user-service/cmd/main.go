@@ -4,10 +4,10 @@ import (
 	"log"
 	"net"
 
+	"github.com/sonni-a/minibank/pkg/db"
+	"github.com/sonni-a/minibank/pkg/middleware"
 	"github.com/sonni-a/minibank/pkg/migrate"
-	"github.com/sonni-a/minibank/user-service/internal/db"
 	"github.com/sonni-a/minibank/user-service/internal/grpc/user"
-	"github.com/sonni-a/minibank/user-service/internal/middleware"
 	"github.com/sonni-a/minibank/user-service/internal/service"
 
 	"google.golang.org/grpc"
@@ -15,7 +15,8 @@ import (
 )
 
 func main() {
-	dbConn := db.Connect("postgres://user:pass@postgres:5432/user_db?sslmode=disable")
+	dbConn := db.Connect()
+	defer dbConn.Close()
 
 	migrate.Run(dbConn, "file://user-service/internal/db/migrations")
 
@@ -29,9 +30,7 @@ func main() {
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(middleware.AuthInterceptor()),
 	)
-
 	user.RegisterUserServiceServer(grpcServer, userService)
-
 	reflection.Register(grpcServer)
 
 	log.Println("User Service running on :50052")

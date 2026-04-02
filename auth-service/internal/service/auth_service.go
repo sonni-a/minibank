@@ -39,7 +39,7 @@ func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (
 		return nil, errors.New("internal server error")
 	}
 
-	return s.generateAndCacheToken(ctx, req.Email)
+	return s.generateAndCacheTokens(ctx, req.Email)
 }
 
 func (s *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResponse, error) {
@@ -57,33 +57,59 @@ func (s *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*auth.
 		return nil, errors.New("invalid password")
 	}
 
-	cachedToken, err := pkgredis.RDB.Get(ctx, "auth:token:"+req.Email).Result()
-	if err == nil && cachedToken != "" {
+	cachedToken, _ := pkgredis.RDB.Get(ctx, "auth:token:"+req.Email).Result()
+	cachedRefresh, _ := pkgredis.RDB.Get(ctx, "auth:refresh:"+req.Email).Result()
+	if cachedToken != "" && cachedRefresh != "" {
 		return &auth.AuthResponse{
 			Token:        cachedToken,
-			RefreshToken: "",
-			Message:      "Login successful (cached token)",
+			RefreshToken: cachedRefresh,
+			Message:      "Login successful (cached tokens)",
 		}, nil
 	}
 
-	return s.generateAndCacheToken(ctx, req.Email)
+	return s.generateAndCacheTokens(ctx, req.Email)
 }
 
-func (s *AuthService) generateAndCacheToken(ctx context.Context, email string) (*auth.AuthResponse, error) {
+func (s *AuthService) RefreshToken(ctx context.Context, req *auth.RefreshTokenRequest) (*auth.AuthResponse, error) {
+	email, err := jwt.ValidateRefreshToken(req.RefreshToken)
+	if err != nil {
+		return nil, errors.New("invalid refresh token")
+	}
+
+	cachedRefresh, _ := pkgredis.RDB.Get(ctx, "auth:refresh:"+email).Result()
+	if cachedRefresh == "" || cachedRefresh != req.RefreshToken {
+		return nil, errors.New("refresh token expired or not found")
+	}
+
+	return s.generateAndCacheTokens(ctx, email)
+}
+
+func (s *AuthService) generateAndCacheTokens(ctx context.Context, email string) (*auth.AuthResponse, error) {
 	token, err := jwt.GenerateJWT(email)
 	if err != nil {
 		log.Println("JWT generation error:", err)
 		return nil, errors.New("internal server error")
 	}
 
-	err = pkgredis.RDB.Set(ctx, "auth:token:"+email, token, time.Hour).Err()
+	refreshToken, err := jwt.GenerateRefreshToken(email)
 	if err != nil {
-		log.Println("Redis set error:", err)
+		log.Println("Refresh JWT generation error:", err)
+		return nil, errors.New("internal server error")
+	}
+
+	err = pkgredis.RDB.Set(ctx, "auth:token:"+email, token, 15*time.Minute).Err()
+	if err != nil {
+		log.Println("Redis set access token error:", err)
+	}
+
+	err = pkgredis.RDB.Set(ctx, "auth:refresh:"+email, refreshToken, 7*24*time.Hour).Err()
+	if err != nil {
+		log.Println("Redis set refresh token error:", err)
 	}
 
 	return &auth.AuthResponse{
 		Token:        token,
-		RefreshToken: "",
+		RefreshToken: refreshToken,
 		Message:      "Operation successful",
 	}, nil
 }

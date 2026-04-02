@@ -3,12 +3,18 @@ package db
 import (
 	"database/sql"
 	"log"
+	"os"
 	"time"
 
 	_ "github.com/lib/pq"
 )
 
-func Connect(connStr string) *sql.DB {
+func Connect() *sql.DB {
+	connStr := os.Getenv("DATABASE_URL")
+	if connStr == "" {
+		log.Fatal("DATABASE_URL not set")
+	}
+
 	var db *sql.DB
 	var err error
 

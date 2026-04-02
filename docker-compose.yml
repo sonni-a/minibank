@@ -1,34 +1,12 @@
-services:
-  postgres:
-    image: postgres:16
-    container_name: postgres
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
-      POSTGRES_DB: auth_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d
-    networks:
-      - minibank-net
-
-  redis:
-    image: redis:7
-    container_name: minibank-redis
-    ports:
-      - "6379:6379"
-    networks:
-      - minibank-net
-
   auth-service:
     build:
       context: .
       dockerfile: auth-service/Dockerfile
     environment:
-      DATABASE_URL: postgres://user:pass@postgres:5432/auth_db?sslmode=disable
-      REDIS_ADDR: redis:6379
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB_AUTH}?sslmode=disable
+      REDIS_ADDR: ${REDIS_ADDR}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET} 
     depends_on:
       - postgres
       - redis
@@ -42,7 +20,9 @@ services:
       context: .
       dockerfile: user-service/Dockerfile
     environment:
-      DATABASE_URL: postgres://user:pass@postgres:5432/user_db?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB_USER}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET} 
     depends_on:
       - postgres
     ports:
@@ -55,16 +35,12 @@ services:
       context: .
       dockerfile: payment-service/Dockerfile
     environment:
-      DATABASE_URL: postgres://user:pass@postgres:5432/payment_db?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB_PAYMENT}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET} 
     depends_on:
       - postgres
     ports:
       - "50053:50053"
     networks:
       - minibank-net
-
-volumes:
-  pgdata:
-
-networks:
-  minibank-net:

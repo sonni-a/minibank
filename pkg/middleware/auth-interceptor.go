@@ -11,6 +11,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type ctxKey string
+
+const UserEmailKey ctxKey = "user_email"
+
 func AuthInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
@@ -19,24 +23,28 @@ func AuthInterceptor() grpc.UnaryServerInterceptor {
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
 
+		if strings.Contains(info.FullMethod, "CreateUser") {
+			return handler(ctx, req)
+		}
+
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
-			return nil, status.Errorf(codes.Unauthenticated, "metadata is not provided")
+			return nil, status.Errorf(codes.Unauthenticated, "metadata not provided")
 		}
 
 		authHeader := md.Get("authorization")
 		if len(authHeader) == 0 {
-			return nil, status.Errorf(codes.Unauthenticated, "authorization token is missing")
+			return nil, status.Errorf(codes.Unauthenticated, "authorization header missing")
 		}
 
 		token := strings.TrimPrefix(authHeader[0], "Bearer ")
 
 		email, err := jwt.ValidateJWT(token)
 		if err != nil {
-			return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
+			return nil, status.Errorf(codes.Unauthenticated, "invalid access token")
 		}
 
-		newCtx := context.WithValue(ctx, "user_email", email)
+		newCtx := context.WithValue(ctx, UserEmailKey, email)
 
 		return handler(newCtx, req)
 	}
