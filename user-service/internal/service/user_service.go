@@ -9,6 +9,7 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/sonni-a/minibank/api/user"
+	"github.com/sonni-a/minibank/pkg/middleware"
 	"github.com/sonni-a/minibank/user-service/internal/models"
 )
 
@@ -51,6 +52,29 @@ func (s *UserService) GetUser(ctx context.Context, req *user.GetUserRequest) (*u
 			return nil, errors.New("user not found")
 		}
 		log.Println("GetUser db error:", err)
+		return nil, errors.New("internal server error")
+	}
+
+	return &user.UserResponse{Id: u.ID, Name: u.Name, Email: u.Email}, nil
+}
+
+func (s *UserService) GetMyUser(ctx context.Context, req *user.GetMyUserRequest) (*user.UserResponse, error) {
+	_ = req
+	email, ok := ctx.Value(middleware.UserEmailKey).(string)
+	if !ok || email == "" {
+		return nil, errors.New("unauthenticated")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	var u models.User
+	err := s.db.QueryRowContext(ctx, "SELECT id, name, email FROM users WHERE email=$1", email).Scan(&u.ID, &u.Name, &u.Email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("user not found")
+		}
+		log.Println("GetMyUser db error:", err)
 		return nil, errors.New("internal server error")
 	}
 
