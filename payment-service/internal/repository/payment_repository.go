@@ -52,20 +52,34 @@ func (r *PaymentRepository) Transfer(fromID, toID int64, amount float64) error {
 		return errors.New("insufficient funds")
 	}
 
-	_, err = tx.Exec(
+	res, err := tx.Exec(
 		"UPDATE accounts SET balance = balance - $1 WHERE user_id=$2",
 		amount, fromID,
 	)
 	if err != nil {
 		return err
 	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return errors.New("debit failed: sender account missing")
+	}
 
-	_, err = tx.Exec(
+	res, err = tx.Exec(
 		"UPDATE accounts SET balance = balance + $1 WHERE user_id=$2",
 		amount, toID,
 	)
 	if err != nil {
 		return err
+	}
+	n, err = res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return errors.New("recipient account not found")
 	}
 
 	return tx.Commit()
