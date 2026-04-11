@@ -21,8 +21,8 @@ func (r *PaymentRepository) CreateAccount(userID int64) error {
 	return err
 }
 
-func (r *PaymentRepository) GetBalance(userID int64) (float64, error) {
-	var balance float64
+func (r *PaymentRepository) GetBalance(userID int64) (int64, error) {
+	var balance int64
 	err := r.db.QueryRow(
 		"SELECT balance FROM accounts WHERE user_id=$1",
 		userID,
@@ -31,14 +31,14 @@ func (r *PaymentRepository) GetBalance(userID int64) (float64, error) {
 	return balance, err
 }
 
-func (r *PaymentRepository) Transfer(fromID, toID int64, amount float64) error {
+func (r *PaymentRepository) Transfer(fromID, toID int64, amount int64) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	var balance float64
+	var balance int64
 	err = tx.QueryRow(
 		"SELECT balance FROM accounts WHERE user_id=$1 FOR UPDATE",
 		fromID,
@@ -85,7 +85,7 @@ func (r *PaymentRepository) Transfer(fromID, toID int64, amount float64) error {
 	return tx.Commit()
 }
 
-func (r *PaymentRepository) Deposit(userID int64, amount float64) error {
+func (r *PaymentRepository) Deposit(userID int64, amount int64) error {
 	_, err := r.db.Exec(
 		"UPDATE accounts SET balance = balance + $1 WHERE user_id=$2",
 		amount, userID,

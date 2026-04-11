@@ -112,7 +112,7 @@ func (x *GetBalanceRequest) GetUserId() int64 {
 type DepositRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	AmountMinor   int64                  `protobuf:"varint,2,opt,name=amount_minor,json=amountMinor,proto3" json:"amount_minor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -154,9 +154,9 @@ func (x *DepositRequest) GetUserId() int64 {
 	return 0
 }
 
-func (x *DepositRequest) GetAmount() float64 {
+func (x *DepositRequest) GetAmountMinor() int64 {
 	if x != nil {
-		return x.Amount
+		return x.AmountMinor
 	}
 	return 0
 }
@@ -165,7 +165,7 @@ type TransferRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FromUserId    int64                  `protobuf:"varint,1,opt,name=from_user_id,json=fromUserId,proto3" json:"from_user_id,omitempty"`
 	ToUserId      int64                  `protobuf:"varint,2,opt,name=to_user_id,json=toUserId,proto3" json:"to_user_id,omitempty"`
-	Amount        float64                `protobuf:"fixed64,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	AmountMinor   int64                  `protobuf:"varint,3,opt,name=amount_minor,json=amountMinor,proto3" json:"amount_minor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -214,9 +214,9 @@ func (x *TransferRequest) GetToUserId() int64 {
 	return 0
 }
 
-func (x *TransferRequest) GetAmount() float64 {
+func (x *TransferRequest) GetAmountMinor() int64 {
 	if x != nil {
-		return x.Amount
+		return x.AmountMinor
 	}
 	return 0
 }
@@ -224,7 +224,7 @@ func (x *TransferRequest) GetAmount() float64 {
 type AccountResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Balance       float64                `protobuf:"fixed64,2,opt,name=balance,proto3" json:"balance,omitempty"`
+	BalanceMinor  int64                  `protobuf:"varint,2,opt,name=balance_minor,json=balanceMinor,proto3" json:"balance_minor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -266,16 +266,16 @@ func (x *AccountResponse) GetUserId() int64 {
 	return 0
 }
 
-func (x *AccountResponse) GetBalance() float64 {
+func (x *AccountResponse) GetBalanceMinor() int64 {
 	if x != nil {
-		return x.Balance
+		return x.BalanceMinor
 	}
 	return 0
 }
 
 type BalanceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Balance       float64                `protobuf:"fixed64,1,opt,name=balance,proto3" json:"balance,omitempty"`
+	BalanceMinor  int64                  `protobuf:"varint,1,opt,name=balance_minor,json=balanceMinor,proto3" json:"balance_minor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -310,9 +310,9 @@ func (*BalanceResponse) Descriptor() ([]byte, []int) {
 	return file_payment_service_proto_payment_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *BalanceResponse) GetBalance() float64 {
+func (x *BalanceResponse) GetBalanceMinor() int64 {
 	if x != nil {
-		return x.Balance
+		return x.BalanceMinor
 	}
 	return 0
 }
@@ -369,21 +369,21 @@ const file_payment_service_proto_payment_proto_rawDesc = "" +
 	"\x14CreateAccountRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x03R\x06userId\",\n" +
 	"\x11GetBalanceRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\x03R\x06userId\"A\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\"L\n" +
 	"\x0eDepositRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x16\n" +
-	"\x06amount\x18\x02 \x01(\x01R\x06amount\"i\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12!\n" +
+	"\famount_minor\x18\x02 \x01(\x03R\vamountMinor\"t\n" +
 	"\x0fTransferRequest\x12 \n" +
 	"\ffrom_user_id\x18\x01 \x01(\x03R\n" +
 	"fromUserId\x12\x1c\n" +
 	"\n" +
-	"to_user_id\x18\x02 \x01(\x03R\btoUserId\x12\x16\n" +
-	"\x06amount\x18\x03 \x01(\x01R\x06amount\"D\n" +
+	"to_user_id\x18\x02 \x01(\x03R\btoUserId\x12!\n" +
+	"\famount_minor\x18\x03 \x01(\x03R\vamountMinor\"O\n" +
 	"\x0fAccountResponse\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x18\n" +
-	"\abalance\x18\x02 \x01(\x01R\abalance\"+\n" +
-	"\x0fBalanceResponse\x12\x18\n" +
-	"\abalance\x18\x01 \x01(\x01R\abalance\",\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12#\n" +
+	"\rbalance_minor\x18\x02 \x01(\x03R\fbalanceMinor\"6\n" +
+	"\x0fBalanceResponse\x12#\n" +
+	"\rbalance_minor\x18\x01 \x01(\x03R\fbalanceMinor\",\n" +
 	"\x10TransferResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage2\x9d\x02\n" +
 	"\x0ePaymentService\x12H\n" +
@@ -391,7 +391,7 @@ const file_payment_service_proto_payment_proto_rawDesc = "" +
 	"\n" +
 	"GetBalance\x12\x1a.payment.GetBalanceRequest\x1a\x18.payment.BalanceResponse\x12<\n" +
 	"\aDeposit\x12\x17.payment.DepositRequest\x1a\x18.payment.BalanceResponse\x12?\n" +
-	"\bTransfer\x12\x18.payment.TransferRequest\x1a\x19.payment.TransferResponseB/Z-payment-service/internal/grpc/payment;paymentb\x06proto3"
+	"\bTransfer\x12\x18.payment.TransferRequest\x1a\x19.payment.TransferResponseBKZIgithub.com/sonni-a/minibank/payment-service/internal/grpc/payment;paymentb\x06proto3"
 
 var (
 	file_payment_service_proto_payment_proto_rawDescOnce sync.Once

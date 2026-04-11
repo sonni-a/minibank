@@ -24,8 +24,8 @@ func (s *PaymentService) CreateAccount(ctx context.Context, req *payment.CreateA
 	}
 
 	return &payment.AccountResponse{
-		UserId:  req.UserId,
-		Balance: 0,
+		UserId:        req.UserId,
+		BalanceMinor: 0,
 	}, nil
 }
 
@@ -36,12 +36,12 @@ func (s *PaymentService) GetBalance(ctx context.Context, req *payment.GetBalance
 	}
 
 	return &payment.BalanceResponse{
-		Balance: balance,
+		BalanceMinor: balance,
 	}, nil
 }
 
 func (s *PaymentService) Transfer(ctx context.Context, req *payment.TransferRequest) (*payment.TransferResponse, error) {
-	if req.Amount <= 0 {
+	if req.AmountMinor <= 0 {
 		return nil, errors.New("invalid amount")
 	}
 
@@ -49,7 +49,7 @@ func (s *PaymentService) Transfer(ctx context.Context, req *payment.TransferRequ
 		return nil, errors.New("cannot transfer to yourself")
 	}
 
-	err := s.repo.Transfer(req.FromUserId, req.ToUserId, req.Amount)
+	err := s.repo.Transfer(req.FromUserId, req.ToUserId, req.AmountMinor)
 	if err != nil {
 		return nil, err
 	}
@@ -60,10 +60,10 @@ func (s *PaymentService) Transfer(ctx context.Context, req *payment.TransferRequ
 }
 
 func (s *PaymentService) Deposit(ctx context.Context, req *payment.DepositRequest) (*payment.BalanceResponse, error) {
-	if req.Amount <= 0 {
+	if req.AmountMinor <= 0 {
 		return nil, errors.New("invalid amount")
 	}
-	err := s.repo.Deposit(req.UserId, req.Amount)
+	err := s.repo.Deposit(req.UserId, req.AmountMinor)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +74,6 @@ func (s *PaymentService) Deposit(ctx context.Context, req *payment.DepositReques
 	}
 
 	return &payment.BalanceResponse{
-		Balance: balance,
+		BalanceMinor: balance,
 	}, nil
 }

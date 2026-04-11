@@ -2,7 +2,9 @@ syntax = "proto3";
 
 package payment;
 
-option go_package = "payment-service/internal/grpc/payment;payment";
+option go_package = "github.com/sonni-a/minibank/payment-service/internal/grpc/payment;payment";
+
+// Amounts and balances are in minor currency units (e.g. kopecks); no floating-point on the wire.
 
 service PaymentService {
   rpc CreateAccount(CreateAccountRequest) returns (AccountResponse);
@@ -21,22 +23,22 @@ message GetBalanceRequest {
 
 message DepositRequest {
   int64 user_id = 1;
-  double amount = 2;
+  int64 amount_minor = 2;
 }
 
 message TransferRequest {
   int64 from_user_id = 1;
   int64 to_user_id = 2;
-  double amount = 3;
+  int64 amount_minor = 3;
 }
 
 message AccountResponse {
   int64 user_id = 1;
-  double balance = 2;
+  int64 balance_minor = 2;
 }
 
 message BalanceResponse {
-  double balance = 1;
+  int64 balance_minor = 1;
 }
 
 message TransferResponse {
