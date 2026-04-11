@@ -249,7 +249,7 @@ const file_auth_service_proto_auth_proto_rawDesc = "" +
 	"\vAuthService\x125\n" +
 	"\bRegister\x12\x15.auth.RegisterRequest\x1a\x12.auth.AuthResponse\x12/\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x12.auth.AuthResponse\x12=\n" +
-	"\fRefreshToken\x12\x19.auth.RefreshTokenRequest\x1a\x12.auth.AuthResponseB&Z$auth-service/internal/grpc/auth;authb\x06proto3"
+	"\fRefreshToken\x12\x19.auth.RefreshTokenRequest\x1a\x12.auth.AuthResponseB+Z)github.com/sonni-a/minibank/api/auth;authb\x06proto3"
 
 var (
 	file_auth_service_proto_auth_proto_rawDescOnce sync.Once

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package user;
 
-option go_package = "user-service/internal/grpc/user;user";
+option go_package = "github.com/sonni-a/minibank/api/user;user";
 
 service UserService {
   rpc CreateUser(CreateUserRequest) returns (UserResponse);

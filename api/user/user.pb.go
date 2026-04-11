@@ -354,7 +354,7 @@ const file_user_service_proto_user_proto_rawDesc = "" +
 	"\n" +
 	"UpdateUser\x12\x17.user.UpdateUserRequest\x1a\x12.user.UserResponse\x12?\n" +
 	"\n" +
-	"DeleteUser\x12\x17.user.DeleteUserRequest\x1a\x18.user.DeleteUserResponseB&Z$user-service/internal/grpc/user;userb\x06proto3"
+	"DeleteUser\x12\x17.user.DeleteUserRequest\x1a\x18.user.DeleteUserResponseB+Z)github.com/sonni-a/minibank/api/user;userb\x06proto3"
 
 var (
 	file_user_service_proto_user_proto_rawDescOnce sync.Once

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/sonni-a/minibank/auth-service/internal/grpc/auth"
+	"github.com/sonni-a/minibank/api/auth"
 	"github.com/sonni-a/minibank/pkg/jwt"
 	pkgredis "github.com/sonni-a/minibank/pkg/redis"
 	"golang.org/x/crypto/bcrypt"

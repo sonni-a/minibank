@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package payment;
 
-option go_package = "github.com/sonni-a/minibank/payment-service/internal/grpc/payment;payment";
+option go_package = "github.com/sonni-a/minibank/api/payment;payment";
 
 // Amounts and balances are in minor currency units (e.g. kopecks); no floating-point on the wire.
 

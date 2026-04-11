@@ -391,7 +391,7 @@ const file_payment_service_proto_payment_proto_rawDesc = "" +
 	"\n" +
 	"GetBalance\x12\x1a.payment.GetBalanceRequest\x1a\x18.payment.BalanceResponse\x12<\n" +
 	"\aDeposit\x12\x17.payment.DepositRequest\x1a\x18.payment.BalanceResponse\x12?\n" +
-	"\bTransfer\x12\x18.payment.TransferRequest\x1a\x19.payment.TransferResponseBKZIgithub.com/sonni-a/minibank/payment-service/internal/grpc/payment;paymentb\x06proto3"
+	"\bTransfer\x12\x18.payment.TransferRequest\x1a\x19.payment.TransferResponseB1Z/github.com/sonni-a/minibank/api/payment;paymentb\x06proto3"
 
 var (
 	file_payment_service_proto_payment_proto_rawDescOnce sync.Once

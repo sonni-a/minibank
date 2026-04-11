@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/sonni-a/minibank/user-service/internal/grpc/user"
+	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/user-service/internal/models"
 )
 

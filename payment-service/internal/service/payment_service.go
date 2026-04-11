@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/sonni-a/minibank/payment-service/internal/grpc/payment"
+	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/payment-service/internal/repository"
 )
 

@@ -1,15 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_AUTH}
+    volumes:
+      - minibank-pg:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    networks:
+      - minibank-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_AUTH}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - minibank-net
+
   auth-service:
     build:
       context: .
       dockerfile: auth-service/Dockerfile
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB_AUTH}?sslmode=disable
-      REDIS_ADDR: ${REDIS_ADDR}
+      REDIS_ADDR: redis:6379
       JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET} 
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "50051:50051"
     networks:
@@ -22,9 +51,10 @@
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB_USER}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET} 
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "50052:50052"
     networks:
@@ -37,10 +67,35 @@
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB_PAYMENT}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET} 
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "50053:50053"
     networks:
       - minibank-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    environment:
+      AUTH_SERVICE_ADDR: auth-service:50051
+      USER_SERVICE_ADDR: user-service:50052
+      PAYMENT_SERVICE_ADDR: payment-service:50053
+      HTTP_ADDR: :8080
+    depends_on:
+      - auth-service
+      - user-service
+      - payment-service
+    ports:
+      - "8080:8080"
+    networks:
+      - minibank-net
+
+networks:
+  minibank-net:
+
+volumes:
+  minibank-pg:

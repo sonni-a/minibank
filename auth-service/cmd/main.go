@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/sonni-a/minibank/auth-service/internal/grpc/auth"
+	"github.com/sonni-a/minibank/api/auth"
 	"github.com/sonni-a/minibank/auth-service/internal/service"
 	"github.com/sonni-a/minibank/pkg/db"
 	"github.com/sonni-a/minibank/pkg/migrate"

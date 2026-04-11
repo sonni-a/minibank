@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/sonni-a/minibank/payment-service/internal/grpc/payment"
+	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/payment-service/internal/repository"
 	"github.com/sonni-a/minibank/payment-service/internal/service"
 	"github.com/sonni-a/minibank/pkg/db"

@@ -7,7 +7,7 @@ import (
 	"github.com/sonni-a/minibank/pkg/db"
 	"github.com/sonni-a/minibank/pkg/middleware"
 	"github.com/sonni-a/minibank/pkg/migrate"
-	"github.com/sonni-a/minibank/user-service/internal/grpc/user"
+	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/user-service/internal/service"
 
 	"google.golang.org/grpc"
