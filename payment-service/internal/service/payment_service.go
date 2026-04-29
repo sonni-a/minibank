@@ -2,12 +2,15 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/payment-service/internal/repository"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type PaymentService struct {
@@ -24,7 +27,7 @@ func NewPaymentService(repo *repository.PaymentRepository, userClient user.UserS
 func (s *PaymentService) callerUserID(ctx context.Context) (int64, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return 0, errors.New("metadata not provided")
+		return 0, status.Errorf(codes.Unauthenticated, "metadata not provided")
 	}
 	outCtx := metadata.NewOutgoingContext(ctx, md)
 
@@ -41,12 +44,12 @@ func (s *PaymentService) CreateAccount(ctx context.Context, req *payment.CreateA
 		return nil, err
 	}
 	if req.UserId != 0 && req.UserId != myID {
-		return nil, errors.New("user_id does not match authenticated user")
+		return nil, status.Errorf(codes.PermissionDenied, "user_id does not match authenticated user")
 	}
 
 	err = s.repo.CreateAccount(myID)
 	if err != nil {
-		return nil, errors.New("account already exists")
+		return nil, status.Errorf(codes.AlreadyExists, "account already exists")
 	}
 
 	return &payment.AccountResponse{
@@ -61,12 +64,15 @@ func (s *PaymentService) GetBalance(ctx context.Context, req *payment.GetBalance
 		return nil, err
 	}
 	if req.UserId != 0 && req.UserId != myID {
-		return nil, errors.New("user_id does not match authenticated user")
+		return nil, status.Errorf(codes.PermissionDenied, "user_id does not match authenticated user")
 	}
 
 	balance, err := s.repo.GetBalance(myID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "account not found")
+		}
+		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	return &payment.BalanceResponse{
@@ -76,7 +82,7 @@ func (s *PaymentService) GetBalance(ctx context.Context, req *payment.GetBalance
 
 func (s *PaymentService) Transfer(ctx context.Context, req *payment.TransferRequest) (*payment.TransferResponse, error) {
 	if req.AmountMinor <= 0 {
-		return nil, errors.New("invalid amount")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid amount")
 	}
 
 	myID, err := s.callerUserID(ctx)
@@ -84,15 +90,25 @@ func (s *PaymentService) Transfer(ctx context.Context, req *payment.TransferRequ
 		return nil, err
 	}
 	if req.FromUserId != 0 && req.FromUserId != myID {
-		return nil, errors.New("from_user_id does not match authenticated user")
+		return nil, status.Errorf(codes.PermissionDenied, "from_user_id does not match authenticated user")
 	}
 	if myID == req.ToUserId {
-		return nil, errors.New("cannot transfer to yourself")
+		return nil, status.Errorf(codes.InvalidArgument, "cannot transfer to yourself")
 	}
 
 	err = s.repo.Transfer(myID, req.ToUserId, req.AmountMinor)
 	if err != nil {
-		return nil, err
+		switch err.Error() {
+		case "insufficient funds":
+			return nil, status.Errorf(codes.FailedPrecondition, "insufficient funds")
+		case "debit failed: sender account missing", "recipient account not found":
+			return nil, status.Error(codes.NotFound, err.Error())
+		default:
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, status.Errorf(codes.NotFound, "account not found")
+			}
+			return nil, status.Errorf(codes.Internal, "internal server error")
+		}
 	}
 
 	return &payment.TransferResponse{
@@ -102,7 +118,7 @@ func (s *PaymentService) Transfer(ctx context.Context, req *payment.TransferRequ
 
 func (s *PaymentService) Deposit(ctx context.Context, req *payment.DepositRequest) (*payment.BalanceResponse, error) {
 	if req.AmountMinor <= 0 {
-		return nil, errors.New("invalid amount")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid amount")
 	}
 
 	myID, err := s.callerUserID(ctx)
@@ -110,17 +126,23 @@ func (s *PaymentService) Deposit(ctx context.Context, req *payment.DepositReques
 		return nil, err
 	}
 	if req.UserId != 0 && req.UserId != myID {
-		return nil, errors.New("user_id does not match authenticated user")
+		return nil, status.Errorf(codes.PermissionDenied, "user_id does not match authenticated user")
 	}
 
 	err = s.repo.Deposit(myID, req.AmountMinor)
 	if err != nil {
-		return nil, err
+		if err.Error() == "account not found" {
+			return nil, status.Errorf(codes.NotFound, "account not found")
+		}
+		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	balance, err := s.repo.GetBalance(myID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "account not found")
+		}
+		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	return &payment.BalanceResponse{
