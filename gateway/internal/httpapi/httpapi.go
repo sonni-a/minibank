@@ -145,8 +145,10 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		Email: body.Email,
 	})
 	if err != nil {
-		// Auth user already exists; client may need to login or admin cleanup.
 		log.Printf("gateway: CreateUser after Register failed: %v", err)
+		if cerr := s.compensateAuth(ctx, body.Email); cerr != nil {
+			log.Printf("gateway: compensate auth after CreateUser failure: %v", cerr)
+		}
 		writeGRPCError(w, err)
 		return
 	}
@@ -155,6 +157,9 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	_, err = s.payment.CreateAccount(payCtx, &paymentpb.CreateAccountRequest{UserId: userResp.Id})
 	if err != nil {
 		log.Printf("gateway: CreateAccount failed (user exists, account missing): %v", err)
+		if cerr := s.compensateUserAndAuth(ctx, authResp.Token, userResp.Id, body.Email); cerr != nil {
+			log.Printf("gateway: compensation after CreateAccount failure: %v", cerr)
+		}
 		writeGRPCError(w, err)
 		return
 	}
@@ -174,6 +179,26 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 func withBearer(ctx context.Context, token string) context.Context {
 	md := metadata.Pairs("authorization", "Bearer "+token)
 	return metadata.NewOutgoingContext(ctx, md)
+}
+
+func (s *Server) compensateAuth(ctx context.Context, email string) error {
+	_, err := s.auth.DeleteAuthUser(ctx, &authpb.DeleteAuthUserRequest{Email: email})
+	return err
+}
+
+func (s *Server) compensateUserAndAuth(ctx context.Context, token string, userID int64, email string) error {
+	var firstErr error
+
+	userCtx := withBearer(ctx, token)
+	if _, err := s.user.DeleteUser(userCtx, &userpb.DeleteUserRequest{Id: userID}); err != nil {
+		firstErr = err
+	}
+
+	if _, err := s.auth.DeleteAuthUser(ctx, &authpb.DeleteAuthUserRequest{Email: email}); err != nil && firstErr == nil {
+		firstErr = err
+	}
+
+	return firstErr
 }
 
 func writeGRPCError(w http.ResponseWriter, err error) {
