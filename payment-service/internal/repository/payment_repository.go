@@ -86,9 +86,21 @@ func (r *PaymentRepository) Transfer(fromID, toID int64, amount int64) error {
 }
 
 func (r *PaymentRepository) Deposit(userID int64, amount int64) error {
-	_, err := r.db.Exec(
+	res, err := r.db.Exec(
 		"UPDATE accounts SET balance = balance + $1 WHERE user_id=$2",
 		amount, userID,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return errors.New("account not found")
+	}
+
+	return nil
 }
