@@ -3,28 +3,26 @@ package jwt
 import (
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtKey = []byte(getSecret())
-var refreshKey = []byte(getRefreshSecret())
-
-func getSecret() string {
-	secret := os.Getenv("JWT_SECRET")
+func getSecret() ([]byte, error) {
+	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if secret == "" {
-		secret = "dev-secret"
+		return nil, errors.New("JWT_SECRET is not set")
 	}
-	return secret
+	return []byte(secret), nil
 }
 
-func getRefreshSecret() string {
-	secret := os.Getenv("JWT_REFRESH_SECRET")
+func getRefreshSecret() ([]byte, error) {
+	secret := strings.TrimSpace(os.Getenv("JWT_REFRESH_SECRET"))
 	if secret == "" {
-		secret = "dev-refresh-secret"
+		return nil, errors.New("JWT_REFRESH_SECRET is not set")
 	}
-	return secret
+	return []byte(secret), nil
 }
 
 type Claims struct {
@@ -38,6 +36,11 @@ type RefreshClaims struct {
 }
 
 func GenerateJWT(email string) (string, error) {
+	jwtKey, err := getSecret()
+	if err != nil {
+		return "", err
+	}
+
 	expirationTime := time.Now().Add(15 * time.Minute)
 
 	claims := &Claims{
@@ -52,6 +55,11 @@ func GenerateJWT(email string) (string, error) {
 }
 
 func GenerateRefreshToken(email string) (string, error) {
+	refreshKey, err := getRefreshSecret()
+	if err != nil {
+		return "", err
+	}
+
 	expirationTime := time.Now().Add(7 * 24 * time.Hour)
 
 	claims := &RefreshClaims{
@@ -66,6 +74,11 @@ func GenerateRefreshToken(email string) (string, error) {
 }
 
 func ValidateJWT(tokenStr string) (string, error) {
+	jwtKey, err := getSecret()
+	if err != nil {
+		return "", err
+	}
+
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
@@ -84,6 +97,11 @@ func ValidateJWT(tokenStr string) (string, error) {
 }
 
 func ValidateRefreshToken(tokenStr string) (string, error) {
+	refreshKey, err := getRefreshSecret()
+	if err != nil {
+		return "", err
+	}
+
 	claims := &RefreshClaims{}
 
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
