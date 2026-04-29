@@ -8,6 +8,7 @@ service AuthService {
   rpc Register(RegisterRequest) returns (AuthResponse);
   rpc Login(LoginRequest) returns (AuthResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
+  rpc DeleteAuthUser(DeleteAuthUserRequest) returns (DeleteAuthUserResponse);
 }
 
 message RegisterRequest {
@@ -28,4 +29,12 @@ message AuthResponse {
   string token = 1;
   string refresh_token = 2;
   string message = 3;
+}
+
+message DeleteAuthUserRequest {
+  string email = 1;
+}
+
+message DeleteAuthUserResponse {
+  string message = 1;
 }

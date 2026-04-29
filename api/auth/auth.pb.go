@@ -229,6 +229,94 @@ func (x *AuthResponse) GetMessage() string {
 	return ""
 }
 
+type DeleteAuthUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAuthUserRequest) Reset() {
+	*x = DeleteAuthUserRequest{}
+	mi := &file_auth_service_proto_auth_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAuthUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAuthUserRequest) ProtoMessage() {}
+
+func (x *DeleteAuthUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_service_proto_auth_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAuthUserRequest.ProtoReflect.Descriptor instead.
+func (*DeleteAuthUserRequest) Descriptor() ([]byte, []int) {
+	return file_auth_service_proto_auth_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DeleteAuthUserRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+type DeleteAuthUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAuthUserResponse) Reset() {
+	*x = DeleteAuthUserResponse{}
+	mi := &file_auth_service_proto_auth_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAuthUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAuthUserResponse) ProtoMessage() {}
+
+func (x *DeleteAuthUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_service_proto_auth_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAuthUserResponse.ProtoReflect.Descriptor instead.
+func (*DeleteAuthUserResponse) Descriptor() ([]byte, []int) {
+	return file_auth_service_proto_auth_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DeleteAuthUserResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_auth_service_proto_auth_proto protoreflect.FileDescriptor
 
 const file_auth_service_proto_auth_proto_rawDesc = "" +
@@ -245,11 +333,16 @@ const file_auth_service_proto_auth_proto_rawDesc = "" +
 	"\fAuthResponse\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage2\xb4\x01\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"-\n" +
+	"\x15DeleteAuthUserRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\"2\n" +
+	"\x16DeleteAuthUserResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\x81\x02\n" +
 	"\vAuthService\x125\n" +
 	"\bRegister\x12\x15.auth.RegisterRequest\x1a\x12.auth.AuthResponse\x12/\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x12.auth.AuthResponse\x12=\n" +
-	"\fRefreshToken\x12\x19.auth.RefreshTokenRequest\x1a\x12.auth.AuthResponseB+Z)github.com/sonni-a/minibank/api/auth;authb\x06proto3"
+	"\fRefreshToken\x12\x19.auth.RefreshTokenRequest\x1a\x12.auth.AuthResponse\x12K\n" +
+	"\x0eDeleteAuthUser\x12\x1b.auth.DeleteAuthUserRequest\x1a\x1c.auth.DeleteAuthUserResponseB+Z)github.com/sonni-a/minibank/api/auth;authb\x06proto3"
 
 var (
 	file_auth_service_proto_auth_proto_rawDescOnce sync.Once
@@ -263,22 +356,26 @@ func file_auth_service_proto_auth_proto_rawDescGZIP() []byte {
 	return file_auth_service_proto_auth_proto_rawDescData
 }
 
-var file_auth_service_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_auth_service_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_auth_service_proto_auth_proto_goTypes = []any{
-	(*RegisterRequest)(nil),     // 0: auth.RegisterRequest
-	(*LoginRequest)(nil),        // 1: auth.LoginRequest
-	(*RefreshTokenRequest)(nil), // 2: auth.RefreshTokenRequest
-	(*AuthResponse)(nil),        // 3: auth.AuthResponse
+	(*RegisterRequest)(nil),        // 0: auth.RegisterRequest
+	(*LoginRequest)(nil),           // 1: auth.LoginRequest
+	(*RefreshTokenRequest)(nil),    // 2: auth.RefreshTokenRequest
+	(*AuthResponse)(nil),           // 3: auth.AuthResponse
+	(*DeleteAuthUserRequest)(nil),  // 4: auth.DeleteAuthUserRequest
+	(*DeleteAuthUserResponse)(nil), // 5: auth.DeleteAuthUserResponse
 }
 var file_auth_service_proto_auth_proto_depIdxs = []int32{
 	0, // 0: auth.AuthService.Register:input_type -> auth.RegisterRequest
 	1, // 1: auth.AuthService.Login:input_type -> auth.LoginRequest
 	2, // 2: auth.AuthService.RefreshToken:input_type -> auth.RefreshTokenRequest
-	3, // 3: auth.AuthService.Register:output_type -> auth.AuthResponse
-	3, // 4: auth.AuthService.Login:output_type -> auth.AuthResponse
-	3, // 5: auth.AuthService.RefreshToken:output_type -> auth.AuthResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	4, // 3: auth.AuthService.DeleteAuthUser:input_type -> auth.DeleteAuthUserRequest
+	3, // 4: auth.AuthService.Register:output_type -> auth.AuthResponse
+	3, // 5: auth.AuthService.Login:output_type -> auth.AuthResponse
+	3, // 6: auth.AuthService.RefreshToken:output_type -> auth.AuthResponse
+	5, // 7: auth.AuthService.DeleteAuthUser:output_type -> auth.DeleteAuthUserResponse
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -295,7 +392,7 @@ func file_auth_service_proto_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_service_proto_auth_proto_rawDesc), len(file_auth_service_proto_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

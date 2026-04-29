@@ -84,6 +84,31 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *auth.RefreshTokenRe
 	return s.generateAndCacheTokens(ctx, email)
 }
 
+func (s *AuthService) DeleteAuthUser(ctx context.Context, req *auth.DeleteAuthUserRequest) (*auth.DeleteAuthUserResponse, error) {
+	if req.Email == "" {
+		return nil, errors.New("email is required")
+	}
+
+	res, err := s.db.ExecContext(ctx, "DELETE FROM auth_users WHERE email=$1", req.Email)
+	if err != nil {
+		log.Println("DeleteAuthUser db error:", err)
+		return nil, errors.New("internal server error")
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Println("DeleteAuthUser rows affected error:", err)
+		return nil, errors.New("internal server error")
+	}
+	if rows == 0 {
+		return nil, errors.New("user not found")
+	}
+
+	_ = pkgredis.RDB.Del(ctx, "auth:token:"+req.Email, "auth:refresh:"+req.Email).Err()
+
+	return &auth.DeleteAuthUserResponse{Message: "auth user deleted"}, nil
+}
+
 func (s *AuthService) generateAndCacheTokens(ctx context.Context, email string) (*auth.AuthResponse, error) {
 	token, err := jwt.GenerateJWT(email)
 	if err != nil {
