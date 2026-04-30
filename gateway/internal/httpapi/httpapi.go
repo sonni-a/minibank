@@ -128,10 +128,9 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
-	defer cancel()
-
-	authResp, err := s.auth.Register(ctx, &authpb.RegisterRequest{
+	authCtx, cancelAuth := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancelAuth()
+	authResp, err := s.auth.Register(authCtx, &authpb.RegisterRequest{
 		Email:    body.Email,
 		Password: body.Password,
 	})
@@ -140,24 +139,32 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userResp, err := s.user.CreateUser(ctx, &userpb.CreateUserRequest{
+	userCtx, cancelUser := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancelUser()
+	userResp, err := s.user.CreateUser(userCtx, &userpb.CreateUserRequest{
 		Name:  body.Name,
 		Email: body.Email,
 	})
 	if err != nil {
 		log.Printf("gateway: CreateUser after Register failed: %v", err)
-		if cerr := s.compensateAuth(ctx, body.Email); cerr != nil {
+		compCtx, compCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer compCancel()
+		if cerr := s.compensateAuth(compCtx, body.Email); cerr != nil {
 			log.Printf("gateway: compensate auth after CreateUser failure: %v", cerr)
 		}
 		writeGRPCError(w, err)
 		return
 	}
 
-	payCtx := withBearer(ctx, authResp.Token)
+	payRPCctx, cancelPay := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancelPay()
+	payCtx := withBearer(payRPCctx, authResp.Token)
 	_, err = s.payment.CreateAccount(payCtx, &paymentpb.CreateAccountRequest{UserId: userResp.Id})
 	if err != nil {
 		log.Printf("gateway: CreateAccount failed (user exists, account missing): %v", err)
-		if cerr := s.compensateUserAndAuth(ctx, authResp.Token, userResp.Id, body.Email); cerr != nil {
+		compCtx, compCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer compCancel()
+		if cerr := s.compensateUserAndAuth(compCtx, authResp.Token, userResp.Id, body.Email); cerr != nil {
 			log.Printf("gateway: compensation after CreateAccount failure: %v", cerr)
 		}
 		writeGRPCError(w, err)

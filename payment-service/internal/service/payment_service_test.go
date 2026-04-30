@@ -42,7 +42,7 @@ func TestDeposit_InvalidAmount_ReturnsInvalidArgument(t *testing.T) {
 func TestCreateAccount_WithoutMetadata_ReturnsUnauthenticated(t *testing.T) {
 	svc := &PaymentService{}
 
-	_, err := svc.CreateAccount(context.Background(), &payment.CreateAccountRequest{UserId: 1})
+	_, err := svc.CreateAccount(context.Background(), &payment.CreateAccountRequest{})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
