@@ -9,6 +9,6 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o gateway ./gateway/cmd/main.go
+RUN go build -o gateway-app ./gateway/cmd/main.go
 
-CMD ["./gateway"]
+CMD ["./gateway-app"]
