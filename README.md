@@ -1,69 +1,139 @@
-# Minibank (Go, PostgreSQL, gRPC, Redis, JWT, Docker, Docker Compose)
+# Minibank
 
-## Функциональность
-- Регистрация и авторизация пользователей
-- Генерация JWT access и refresh токенов
-- CRUD операции с пользователями
-- Переводы и платежи между пользователями
+Микросервисный backend банка на Go.
+Проект моделирует базовые банковские сценарии: регистрацию, работу с профилем, счетом, балансом и переводами.
+
+## Стек
+
+- Go
+- gRPC + Protocol Buffers
+- PostgreSQL
+- Redis
+- JWT (access + refresh)
+- Docker / Docker Compose
+- golang-migrate
 
 ## Архитектура
-Каждый сервис (auth, user, payment) работает отдельно, общается через gRPC, данные хранятся в PostgreSQL, Redis используется для кэша токенов.
 
-## Инструкция по запуску
-1. Склонировать репозиторий
+- `auth-service` - регистрация, логин, refresh токена
+- `user-service` - операции с профилем пользователя
+- `payment-service` - счет, баланс, пополнение, перевод
+- `gateway` - HTTP-вход и взаимодействие между gRPC-сервисами
+
+## Функциональность
+
+- Регистрация и авторизация пользователей
+- Генерация и валидация access/refresh JWT
+- CRUD для пользователей
+- Создание счета
+- Пополнение счета
+- Получение баланса
+- Перевод между счетами с транзакцией
+
+## Как запустить проект
+
+1. Склонировать репозиторий:
+
 ```bash
 git clone github.com/sonni-a/minibank.git
+cd minibank
 ```
-2. Создать .env на основе .env.example
+
+2. Создать `.env` из примера:
+
 ```bash
 cp .env.example .env
 ```
-3. Запустить через docker-compose
+
+3. Запустить все сервисы:
+
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
-## Запросы и примеры 
-Register:
+4. Проверить, что gateway поднялся:
 
-<img width="732" height="174" alt="image" src="https://github.com/user-attachments/assets/a630222e-d6d0-45b0-bb41-5af5e5a44276" />
+```bash
+curl http://localhost:8080/health
+```
 
-Login:
+После запуска доступны:
 
-<img width="825" height="168" alt="image" src="https://github.com/user-attachments/assets/31681b29-6562-4bf6-866b-3c468f9c61a1" />
+- gateway: `localhost:8080`
+- auth-service (gRPC): `localhost:50051`
+- user-service (gRPC): `localhost:50052`
+- payment-service (gRPC): `localhost:50053`
 
-Create User:
+## Примеры использования
 
-<img width="849" height="187" alt="image" src="https://github.com/user-attachments/assets/4a521777-740b-4c45-8857-9275a9814e5a" />
+### 1) HTTP через gateway
 
-Update User:
+Проверка здоровья:
 
-<img width="858" height="176" alt="image" src="https://github.com/user-attachments/assets/93386176-3c8b-4118-ba0b-8054fe3ab320" />
+```bash
+curl http://localhost:8080/health
+```
 
-Get User:
+Регистрация (gateway оркестрирует auth + user + payment):
 
-<img width="858" height="172" alt="image" src="https://github.com/user-attachments/assets/38a3b05f-163b-4b7b-895e-c2406c8ae074" />
+```bash
+curl -X POST http://localhost:8080/api/v1/register \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"Alice\",\"email\":\"alice@example.com\",\"password\":\"secret123\"}"
+```
 
-Delete User:
+### 2) gRPC через grpcurl
 
-<img width="854" height="154" alt="image" src="https://github.com/user-attachments/assets/afc85ff0-b269-4150-9ac9-78846035a046" />
+Логин:
 
-Create Account (создать счет):
+```bash
+grpcurl -plaintext -d "{\"email\":\"alice@example.com\",\"password\":\"secret123\"}" \
+  localhost:50051 auth.AuthService/Login
+```
 
-<img width="858" height="154" alt="image" src="https://github.com/user-attachments/assets/2e052507-6edd-4fad-a2c1-1ee97458254d" />
+После логина сохранить `token` и использовать его как `Bearer` metadata для защищенных методов:
 
-Deposit (пополнить счет):
+```bash
+grpcurl -plaintext -H "authorization: Bearer <ACCESS_TOKEN>" -d "{}" \
+  localhost:50052 user.UserService/GetMyUser
+```
 
-<img width="855" height="151" alt="image" src="https://github.com/user-attachments/assets/b8a602f0-7b83-481b-9b10-d6dbd8de3a61" />
+Пополнение счета:
 
-Get Balance (узнать баланс):
+```bash
+grpcurl -plaintext -H "authorization: Bearer <ACCESS_TOKEN>" \
+  -d "{\"amount_minor\":10000}" \
+  localhost:50053 payment.PaymentService/Deposit
+```
 
-<img width="856" height="152" alt="image" src="https://github.com/user-attachments/assets/86e054a7-c8c1-4d25-ba0b-6e4367813336" />
+Перевод:
 
-Transfer (перевести с одного счета на другой):
+```bash
+grpcurl -plaintext -H "authorization: Bearer <ACCESS_TOKEN>" \
+  -d "{\"to_user_id\":2,\"amount_minor\":5000}" \
+  localhost:50053 payment.PaymentService/Transfer
+```
 
-<img width="849" height="154" alt="image" src="https://github.com/user-attachments/assets/dba5a37c-cdbb-4988-8e3d-525199a0c4c3" />
+Refresh токена:
 
-Попытка перевести сумму больше той, которая находится на счете:
+```bash
+grpcurl -plaintext -d "{\"refresh_token\":\"<REFRESH_TOKEN>\"}" \
+  localhost:50051 auth.AuthService/RefreshToken
+```
 
-<img width="851" height="142" alt="image" src="https://github.com/user-attachments/assets/649dfe2f-2f57-49e0-a334-b597f42fe76d" />
+Проверка баланса:
+
+```bash
+grpcurl -plaintext -H "authorization: Bearer <ACCESS_TOKEN>" -d "{}" \
+  localhost:50053 payment.PaymentService/GetBalance
+```
+
+
+
+## Тестирование
+
+Запуск всех тестов:
+
+```bash
+go test ./...
+```
