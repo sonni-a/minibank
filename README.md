@@ -1,5 +1,7 @@
 # Minibank
 
+![Тесты](https://github.com/sonni-a/minibank/actions/workflows/test.yml/badge.svg)
+
 Микросервисный backend банка на Go.
 Проект моделирует базовые банковские сценарии: регистрацию, работу с профилем, счетом, балансом и переводами.
 
