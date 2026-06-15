@@ -15,6 +15,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const pgUniqueViolation = "23505"
+
 type UserService struct {
 	db *sql.DB
 	user.UnimplementedUserServiceServer
@@ -33,7 +35,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *user.CreateUserReques
 		"INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id",
 		req.Name, req.Email).Scan(&id)
 	if err != nil {
-		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgUniqueViolation {
 			return nil, status.Errorf(codes.AlreadyExists, "email already exists")
 		}
 		log.Println("CreateUser db error:", err)

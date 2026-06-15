@@ -16,6 +16,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const pgUniqueViolation = "23505"
+
 type AuthService struct {
 	auth.UnimplementedAuthServiceServer
 	db    *sql.DB
@@ -35,7 +37,7 @@ func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (
 
 	_, err = s.db.Exec("INSERT INTO auth_users (email, password_hash) VALUES ($1, $2)", req.Email, string(hash))
 	if err != nil {
-		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgUniqueViolation {
 			return nil, status.Errorf(codes.AlreadyExists, "email already registered")
 		}
 		log.Println("DB insert error:", err)
