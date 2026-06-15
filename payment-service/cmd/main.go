@@ -3,14 +3,13 @@ package main
 import (
 	"log"
 	"net"
-	"os"
-	"strings"
 
 	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/payment-service/internal/repository"
 	"github.com/sonni-a/minibank/payment-service/internal/service"
 	"github.com/sonni-a/minibank/pkg/db"
+	"github.com/sonni-a/minibank/pkg/env"
 	"github.com/sonni-a/minibank/pkg/middleware"
 	"github.com/sonni-a/minibank/pkg/migrate"
 	"google.golang.org/grpc"
@@ -24,7 +23,7 @@ func main() {
 
 	migrate.Run(dbConn, "file://payment-service/internal/db/migrations")
 
-	userAddr := getenv("USER_SERVICE_ADDR", "localhost:50052")
+	userAddr := env.Getenv("USER_SERVICE_ADDR", "localhost:50052")
 	userConn, err := grpc.NewClient(userAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("user-service dial: %v", err)
@@ -52,9 +51,3 @@ func main() {
 	}
 }
 
-func getenv(key, def string) string {
-	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
-		return v
-	}
-	return def
-}

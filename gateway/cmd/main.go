@@ -3,16 +3,15 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
-	"strings"
 
 	"github.com/sonni-a/minibank/gateway/internal/httpapi"
+	"github.com/sonni-a/minibank/pkg/env"
 )
 
 func main() {
-	authAddr := getenv("AUTH_SERVICE_ADDR", "localhost:50051")
-	userAddr := getenv("USER_SERVICE_ADDR", "localhost:50052")
-	payAddr := getenv("PAYMENT_SERVICE_ADDR", "localhost:50053")
+	authAddr := env.Getenv("AUTH_SERVICE_ADDR", "localhost:50051")
+	userAddr := env.Getenv("USER_SERVICE_ADDR", "localhost:50052")
+	payAddr := env.Getenv("PAYMENT_SERVICE_ADDR", "localhost:50053")
 
 	srv, err := httpapi.New(authAddr, userAddr, payAddr)
 	if err != nil {
@@ -31,9 +30,3 @@ func main() {
 	}
 }
 
-func getenv(key, def string) string {
-	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
-		return v
-	}
-	return def
-}

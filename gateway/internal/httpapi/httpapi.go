@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	authpb "github.com/sonni-a/minibank/api/auth"
 	paymentpb "github.com/sonni-a/minibank/api/payment"
 	userpb "github.com/sonni-a/minibank/api/user"
+	"github.com/sonni-a/minibank/pkg/env"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -229,14 +229,7 @@ func writeGRPCError(w http.ResponseWriter, err error) {
 	}
 }
 
-func getenv(key, def string) string {
-	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
-		return v
-	}
-	return def
-}
-
 // ListenAddr returns HTTP listen address from env HTTP_ADDR or default ":8080".
 func ListenAddr() string {
-	return getenv("HTTP_ADDR", ":8080")
+	return env.Getenv("HTTP_ADDR", ":8080")
 }
