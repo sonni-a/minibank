@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net"
 	"os"
 
@@ -16,6 +16,8 @@ import (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	dbConn := db.Connect()
 	defer dbConn.Close()
 
@@ -24,7 +26,7 @@ func main() {
 	rdb := pkgredis.Connect(os.Getenv("REDIS_ADDR"))
 	defer func() {
 		if err := rdb.Close(); err != nil {
-			log.Println("Error closing Redis:", err)
+			slog.Warn("error closing Redis", "error", err)
 		}
 	}()
 
@@ -32,7 +34,8 @@ func main() {
 
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to listen", "error", err)
+		os.Exit(1)
 	}
 
 	grpcServer := grpc.NewServer(
@@ -45,8 +48,9 @@ func main() {
 	auth.RegisterAuthServiceServer(grpcServer, authService)
 	reflection.Register(grpcServer)
 
-	log.Println("Auth Service running on :50051")
+	slog.Info("auth service started", "addr", ":50051")
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatal(err)
+		slog.Error("grpc serve failed", "error", err)
+		os.Exit(1)
 	}
 }

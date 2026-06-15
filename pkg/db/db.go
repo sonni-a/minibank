@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -12,7 +12,8 @@ import (
 func Connect() *sql.DB {
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
-		log.Fatal("DATABASE_URL not set")
+		slog.Error("DATABASE_URL not set")
+		os.Exit(1)
 	}
 
 	var db *sql.DB
@@ -21,21 +22,22 @@ func Connect() *sql.DB {
 	for i := 0; i < 10; i++ {
 		db, err = sql.Open("postgres", connStr)
 		if err != nil {
-			log.Println("failed to open db:", err)
+			slog.Warn("failed to open db", "error", err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
 		err = db.Ping()
 		if err == nil {
-			log.Println("connected to db")
+			slog.Info("connected to db")
 			return db
 		}
 
-		log.Println("db not ready, retrying...", err)
+		slog.Warn("db not ready, retrying", "error", err)
 		time.Sleep(2 * time.Second)
 	}
 
-	log.Fatal("could not connect to db:", err)
+	slog.Error("could not connect to db", "error", err)
+	os.Exit(1)
 	return nil
 }

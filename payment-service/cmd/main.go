@@ -1,8 +1,9 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net"
+	"os"
 
 	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/api/user"
@@ -18,6 +19,8 @@ import (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	dbConn := db.Connect()
 	defer dbConn.Close()
 
@@ -26,7 +29,8 @@ func main() {
 	userAddr := env.Getenv("USER_SERVICE_ADDR", "localhost:50052")
 	userConn, err := grpc.NewClient(userAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("user-service dial: %v", err)
+		slog.Error("failed to connect to user-service", "addr", userAddr, "error", err)
+		os.Exit(1)
 	}
 	defer userConn.Close()
 
@@ -36,7 +40,8 @@ func main() {
 
 	lis, err := net.Listen("tcp", ":50053")
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		slog.Error("failed to listen", "error", err)
+		os.Exit(1)
 	}
 
 	grpcServer := grpc.NewServer(
@@ -45,9 +50,9 @@ func main() {
 	payment.RegisterPaymentServiceServer(grpcServer, paymentService)
 	reflection.Register(grpcServer)
 
-	log.Printf("Payment Service on :50053 (user-service=%s)", userAddr)
+	slog.Info("payment service started", "addr", ":50053", "user-service", userAddr)
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		slog.Error("grpc serve failed", "error", err)
+		os.Exit(1)
 	}
 }
-

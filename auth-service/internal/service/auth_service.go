@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/lib/pq"
@@ -31,7 +31,7 @@ func NewAuthService(db *sql.DB, cache *redis.Client) *AuthService {
 func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (*auth.AuthResponse, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Println("Error hashing password:", err)
+		slog.Error("failed to hash password", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
@@ -40,7 +40,7 @@ func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (
 		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgUniqueViolation {
 			return nil, status.Errorf(codes.AlreadyExists, "email already registered")
 		}
-		log.Println("DB insert error:", err)
+		slog.Error("db insert failed", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
@@ -54,7 +54,7 @@ func (s *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*auth.
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "user not found")
 		}
-		log.Println("DB query error:", err)
+		slog.Error("db query failed", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
@@ -86,13 +86,13 @@ func (s *AuthService) DeleteAuthUser(ctx context.Context, req *auth.DeleteAuthUs
 
 	res, err := s.db.ExecContext(ctx, "DELETE FROM auth_users WHERE email=$1", req.Email)
 	if err != nil {
-		log.Println("DeleteAuthUser db error:", err)
+		slog.Error("DeleteAuthUser db error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
-		log.Println("DeleteAuthUser rows affected error:", err)
+		slog.Error("DeleteAuthUser rows affected error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 	if rows == 0 {
@@ -107,24 +107,24 @@ func (s *AuthService) DeleteAuthUser(ctx context.Context, req *auth.DeleteAuthUs
 func (s *AuthService) generateAndCacheTokens(ctx context.Context, email string) (*auth.AuthResponse, error) {
 	token, err := jwt.GenerateJWT(email)
 	if err != nil {
-		log.Println("JWT generation error:", err)
+		slog.Error("failed to generate JWT", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	refreshToken, err := jwt.GenerateRefreshToken(email)
 	if err != nil {
-		log.Println("Refresh JWT generation error:", err)
+		slog.Error("failed to generate refresh JWT", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	err = s.cache.Set(ctx, "auth:token:"+email, token, 15*time.Minute).Err()
 	if err != nil {
-		log.Println("Redis set access token error:", err)
+		slog.Warn("failed to cache access token", "error", err)
 	}
 
 	err = s.cache.Set(ctx, "auth:refresh:"+email, refreshToken, 7*24*time.Hour).Err()
 	if err != nil {
-		log.Println("Redis set refresh token error:", err)
+		slog.Warn("failed to cache refresh token", "error", err)
 	}
 
 	return &auth.AuthResponse{

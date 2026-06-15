@@ -2,7 +2,8 @@ package migrate
 
 import (
 	"database/sql"
-	"log"
+	"log/slog"
+	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -12,17 +13,20 @@ import (
 func Run(dbConn *sql.DB, migrationsPath string) {
 	driver, err := postgres.WithInstance(dbConn, &postgres.Config{})
 	if err != nil {
-		log.Fatalf("failed to create migrate driver: %v", err)
+		slog.Error("failed to create migrate driver", "error", err)
+		os.Exit(1)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(migrationsPath, "postgres", driver)
 	if err != nil {
-		log.Fatalf("failed to create migrate instance: %v", err)
+		slog.Error("failed to create migrate instance", "error", err)
+		os.Exit(1)
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatalf("failed to run migrations: %v", err)
+		slog.Error("failed to run migrations", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Migrations applied successfully!")
+	slog.Info("migrations applied")
 }

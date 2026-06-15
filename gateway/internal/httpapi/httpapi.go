@@ -3,7 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -179,11 +179,11 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		Email: body.Email,
 	})
 	if err != nil {
-		log.Printf("gateway: CreateUser after Register failed: %v", err)
+		slog.Error("CreateUser after Register failed", "error", err)
 		compCtx, compCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer compCancel()
 		if cerr := s.compensateAuth(compCtx, body.Email); cerr != nil {
-			log.Printf("gateway: compensate auth after CreateUser failure: %v", cerr)
+			slog.Error("compensate auth after CreateUser failure", "error", cerr)
 		}
 		writeGRPCError(w, err)
 		return
@@ -194,11 +194,11 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	payCtx := withBearer(payRPCctx, authResp.Token)
 	_, err = s.payment.CreateAccount(payCtx, &paymentpb.CreateAccountRequest{UserId: userResp.Id})
 	if err != nil {
-		log.Printf("gateway: CreateAccount failed (user exists, account missing): %v", err)
+		slog.Error("CreateAccount failed, user exists but account missing", "error", err)
 		compCtx, compCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer compCancel()
 		if cerr := s.compensateUserAndAuth(compCtx, authResp.Token, userResp.Id, body.Email); cerr != nil {
-			log.Printf("gateway: compensation after CreateAccount failure: %v", cerr)
+			slog.Error("compensation after CreateAccount failure", "error", cerr)
 		}
 		writeGRPCError(w, err)
 		return

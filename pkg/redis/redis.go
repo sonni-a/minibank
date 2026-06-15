@@ -2,7 +2,8 @@ package redis
 
 import (
 	"context"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -19,9 +20,10 @@ func Connect(addr string) *redis.Client {
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Fatalf("failed to connect to redis: %v", err)
+		slog.Error("failed to connect to Redis", "addr", addr, "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Connected to Redis:", addr)
+	slog.Info("connected to Redis", "addr", addr)
 	return rdb
 }

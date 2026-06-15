@@ -1,20 +1,22 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net"
+	"os"
 
+	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/pkg/db"
 	"github.com/sonni-a/minibank/pkg/middleware"
 	"github.com/sonni-a/minibank/pkg/migrate"
-	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/user-service/internal/service"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	dbConn := db.Connect()
 	defer dbConn.Close()
 
@@ -24,7 +26,8 @@ func main() {
 
 	lis, err := net.Listen("tcp", ":50052")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to listen", "error", err)
+		os.Exit(1)
 	}
 
 	grpcServer := grpc.NewServer(
@@ -35,8 +38,9 @@ func main() {
 	user.RegisterUserServiceServer(grpcServer, userService)
 	reflection.Register(grpcServer)
 
-	log.Println("User Service running on :50052")
+	slog.Info("user service started", "addr", ":50052")
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatal(err)
+		slog.Error("grpc serve failed", "error", err)
+		os.Exit(1)
 	}
 }

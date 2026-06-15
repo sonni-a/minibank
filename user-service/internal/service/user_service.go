@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/lib/pq"
@@ -38,7 +38,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *user.CreateUserReques
 		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgUniqueViolation {
 			return nil, status.Errorf(codes.AlreadyExists, "email already exists")
 		}
-		log.Println("CreateUser db error:", err)
+		slog.Error("CreateUser db error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
@@ -55,7 +55,7 @@ func (s *UserService) GetUser(ctx context.Context, req *user.GetUserRequest) (*u
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "user not found")
 		}
-		log.Println("GetUser db error:", err)
+		slog.Error("GetUser db error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
@@ -78,7 +78,7 @@ func (s *UserService) GetMyUser(ctx context.Context, req *user.GetMyUserRequest)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "user not found")
 		}
-		log.Println("GetMyUser db error:", err)
+		slog.Error("GetMyUser db error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
@@ -91,13 +91,13 @@ func (s *UserService) UpdateUser(ctx context.Context, req *user.UpdateUserReques
 
 	res, err := s.db.ExecContext(ctx, "UPDATE users SET name=$1, email=$2 WHERE id=$3", req.Name, req.Email, req.Id)
 	if err != nil {
-		log.Println("UpdateUser db error:", err)
+		slog.Error("UpdateUser db error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
-		log.Println("UpdateUser rows affected error:", err)
+		slog.Error("UpdateUser rows affected error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 	if rows == 0 {
@@ -113,13 +113,13 @@ func (s *UserService) DeleteUser(ctx context.Context, req *user.DeleteUserReques
 
 	res, err := s.db.ExecContext(ctx, "DELETE FROM users WHERE id=$1", req.Id)
 	if err != nil {
-		log.Println("DeleteUser db error:", err)
+		slog.Error("DeleteUser db error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
-		log.Println("DeleteUser rows affected error:", err)
+		slog.Error("DeleteUser rows affected error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 	if rows == 0 {
