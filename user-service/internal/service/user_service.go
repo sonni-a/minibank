@@ -95,7 +95,11 @@ func (s *UserService) UpdateUser(ctx context.Context, req *user.UpdateUserReques
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
-	rows, _ := res.RowsAffected()
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Println("UpdateUser rows affected error:", err)
+		return nil, status.Errorf(codes.Internal, "internal server error")
+	}
 	if rows == 0 {
 		return nil, status.Errorf(codes.NotFound, "user not found")
 	}
@@ -113,7 +117,11 @@ func (s *UserService) DeleteUser(ctx context.Context, req *user.DeleteUserReques
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
-	rows, _ := res.RowsAffected()
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Println("DeleteUser rows affected error:", err)
+		return nil, status.Errorf(codes.Internal, "internal server error")
+	}
 	if rows == 0 {
 		return nil, status.Errorf(codes.NotFound, "user not found")
 	}
