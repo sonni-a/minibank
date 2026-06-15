@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/sonni-a/minibank/api/auth"
 	"github.com/sonni-a/minibank/pkg/jwt"
+	"github.com/sonni-a/minibank/pkg/validate"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,6 +30,16 @@ func NewAuthService(db *sql.DB, cache *redis.Client) *AuthService {
 }
 
 func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (*auth.AuthResponse, error) {
+	if req.Email == "" || req.Password == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "email and password are required")
+	}
+	if !validate.Email(req.Email) {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid email format")
+	}
+	if !validate.Password(req.Password) {
+		return nil, status.Errorf(codes.InvalidArgument, "password must be at least 8 characters")
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		slog.Error("failed to hash password", "error", err)
@@ -48,6 +59,13 @@ func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (
 }
 
 func (s *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*auth.AuthResponse, error) {
+	if req.Email == "" || req.Password == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "email and password are required")
+	}
+	if !validate.Email(req.Email) {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid email format")
+	}
+
 	var hash string
 	row := s.db.QueryRow("SELECT password_hash FROM auth_users WHERE email=$1", req.Email)
 	if err := row.Scan(&hash); err != nil {

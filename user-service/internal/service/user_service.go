@@ -10,6 +10,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/pkg/middleware"
+	"github.com/sonni-a/minibank/pkg/validate"
 	"github.com/sonni-a/minibank/user-service/internal/models"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,6 +28,13 @@ func NewUserService(db *sql.DB) *UserService {
 }
 
 func (s *UserService) CreateUser(ctx context.Context, req *user.CreateUserRequest) (*user.UserResponse, error) {
+	if req.Name == "" || req.Email == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "name and email are required")
+	}
+	if !validate.Email(req.Email) {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid email format")
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
@@ -86,6 +94,13 @@ func (s *UserService) GetMyUser(ctx context.Context, req *user.GetMyUserRequest)
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, req *user.UpdateUserRequest) (*user.UserResponse, error) {
+	if req.Name == "" || req.Email == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "name and email are required")
+	}
+	if !validate.Email(req.Email) {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid email format")
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 

@@ -12,6 +12,7 @@ import (
 	paymentpb "github.com/sonni-a/minibank/api/payment"
 	userpb "github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/pkg/env"
+	"github.com/sonni-a/minibank/pkg/validate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -149,6 +150,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var body RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
@@ -158,6 +160,14 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	body.Email = strings.TrimSpace(body.Email)
 	if body.Name == "" || body.Email == "" || body.Password == "" {
 		http.Error(w, "name, email and password are required", http.StatusBadRequest)
+		return
+	}
+	if !validate.Email(body.Email) {
+		http.Error(w, "invalid email format", http.StatusBadRequest)
+		return
+	}
+	if !validate.Password(body.Password) {
+		http.Error(w, "password must be at least 8 characters", http.StatusBadRequest)
 		return
 	}
 
@@ -257,6 +267,7 @@ func writeGRPCError(w http.ResponseWriter, err error) {
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var body struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -268,6 +279,10 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	body.Email = strings.TrimSpace(body.Email)
 	if body.Email == "" || body.Password == "" {
 		http.Error(w, "email and password are required", http.StatusBadRequest)
+		return
+	}
+	if !validate.Email(body.Email) {
+		http.Error(w, "invalid email format", http.StatusBadRequest)
 		return
 	}
 
@@ -287,6 +302,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var body struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -343,6 +359,7 @@ func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var body struct {
 		Name  string `json:"name"`
 		Email string `json:"email"`
@@ -355,6 +372,10 @@ func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	body.Email = strings.TrimSpace(body.Email)
 	if body.Name == "" || body.Email == "" {
 		http.Error(w, "name and email are required", http.StatusBadRequest)
+		return
+	}
+	if !validate.Email(body.Email) {
+		http.Error(w, "invalid email format", http.StatusBadRequest)
 		return
 	}
 
