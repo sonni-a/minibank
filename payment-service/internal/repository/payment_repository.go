@@ -5,6 +5,13 @@ import (
 	"errors"
 )
 
+var (
+	ErrInsufficientFunds = errors.New("insufficient funds")
+	ErrSenderNotFound    = errors.New("sender account missing")
+	ErrRecipientNotFound = errors.New("recipient account not found")
+	ErrAccountNotFound   = errors.New("account not found")
+)
+
 type PaymentRepository struct {
 	db *sql.DB
 }
@@ -49,7 +56,7 @@ func (r *PaymentRepository) Transfer(fromID, toID int64, amount int64) error {
 	}
 
 	if balance < amount {
-		return errors.New("insufficient funds")
+		return ErrInsufficientFunds
 	}
 
 	res, err := tx.Exec(
@@ -64,7 +71,7 @@ func (r *PaymentRepository) Transfer(fromID, toID int64, amount int64) error {
 		return err
 	}
 	if n != 1 {
-		return errors.New("debit failed: sender account missing")
+		return ErrSenderNotFound
 	}
 
 	res, err = tx.Exec(
@@ -79,7 +86,7 @@ func (r *PaymentRepository) Transfer(fromID, toID int64, amount int64) error {
 		return err
 	}
 	if n != 1 {
-		return errors.New("recipient account not found")
+		return ErrRecipientNotFound
 	}
 
 	return tx.Commit()
@@ -99,7 +106,7 @@ func (r *PaymentRepository) Deposit(userID int64, amount int64) error {
 		return err
 	}
 	if n != 1 {
-		return errors.New("account not found")
+		return ErrAccountNotFound
 	}
 
 	return nil

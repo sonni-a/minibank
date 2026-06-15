@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"regexp"
 	"testing"
 
@@ -26,8 +27,8 @@ func TestTransfer_InsufficientFunds_ReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if err.Error() != "insufficient funds" {
-		t.Fatalf("expected insufficient funds, got %v", err)
+	if !errors.Is(err, ErrInsufficientFunds) {
+		t.Fatalf("expected ErrInsufficientFunds, got %v", err)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -82,8 +83,8 @@ func TestDeposit_AccountNotFound_ReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if err.Error() != "account not found" {
-		t.Fatalf("expected account not found, got %v", err)
+	if !errors.Is(err, ErrAccountNotFound) {
+		t.Fatalf("expected ErrAccountNotFound, got %v", err)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

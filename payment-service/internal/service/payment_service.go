@@ -102,15 +102,12 @@ func (s *PaymentService) Transfer(ctx context.Context, req *payment.TransferRequ
 
 	err = s.repo.Transfer(myID, req.ToUserId, req.AmountMinor)
 	if err != nil {
-		switch err.Error() {
-		case "insufficient funds":
+		switch {
+		case errors.Is(err, repository.ErrInsufficientFunds):
 			return nil, status.Errorf(codes.FailedPrecondition, "insufficient funds")
-		case "debit failed: sender account missing", "recipient account not found":
+		case errors.Is(err, repository.ErrSenderNotFound), errors.Is(err, repository.ErrRecipientNotFound):
 			return nil, status.Error(codes.NotFound, err.Error())
 		default:
-			if errors.Is(err, sql.ErrNoRows) {
-				return nil, status.Errorf(codes.NotFound, "account not found")
-			}
 			return nil, status.Errorf(codes.Internal, "internal server error")
 		}
 	}
@@ -135,7 +132,7 @@ func (s *PaymentService) Deposit(ctx context.Context, req *payment.DepositReques
 
 	err = s.repo.Deposit(myID, req.AmountMinor)
 	if err != nil {
-		if err.Error() == "account not found" {
+		if errors.Is(err, repository.ErrAccountNotFound) {
 			return nil, status.Errorf(codes.NotFound, "account not found")
 		}
 		return nil, status.Errorf(codes.Internal, "internal server error")
