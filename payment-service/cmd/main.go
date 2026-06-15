@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/api/user"
@@ -50,9 +52,18 @@ func main() {
 	payment.RegisterPaymentServiceServer(grpcServer, paymentService)
 	reflection.Register(grpcServer)
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		if err := grpcServer.Serve(lis); err != nil {
+			slog.Error("grpc serve failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
 	slog.Info("payment service started", "addr", ":50053", "user-service", userAddr)
-	if err := grpcServer.Serve(lis); err != nil {
-		slog.Error("grpc serve failed", "error", err)
-		os.Exit(1)
-	}
+	<-quit
+	slog.Info("shutting down payment service...")
+	grpcServer.GracefulStop()
 }

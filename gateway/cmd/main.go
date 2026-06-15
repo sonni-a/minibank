@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/sonni-a/minibank/gateway/internal/httpapi"
 	"github.com/sonni-a/minibank/pkg/env"
@@ -28,9 +33,28 @@ func main() {
 	}()
 
 	addr := httpapi.ListenAddr()
+	httpServer := &http.Server{
+		Addr:    addr,
+		Handler: srv.Handler(),
+	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("http server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
 	slog.Info("gateway started", "addr", addr, "auth", authAddr, "user", userAddr, "payment", payAddr)
-	if err := http.ListenAndServe(addr, srv.Handler()); err != nil {
-		slog.Error("http server failed", "error", err)
+	<-quit
+	slog.Info("shutting down gateway...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(ctx); err != nil {
+		slog.Error("graceful shutdown failed", "error", err)
 		os.Exit(1)
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/pkg/db"
@@ -38,9 +40,18 @@ func main() {
 	user.RegisterUserServiceServer(grpcServer, userService)
 	reflection.Register(grpcServer)
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		if err := grpcServer.Serve(lis); err != nil {
+			slog.Error("grpc serve failed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
 	slog.Info("user service started", "addr", ":50052")
-	if err := grpcServer.Serve(lis); err != nil {
-		slog.Error("grpc serve failed", "error", err)
-		os.Exit(1)
-	}
+	<-quit
+	slog.Info("shutting down user service...")
+	grpcServer.GracefulStop()
 }
