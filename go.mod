@@ -1,6 +1,6 @@
 module github.com/sonni-a/minibank
 
-go 1.25.8
+go 1.25.0
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2

@@ -62,16 +62,6 @@ func (s *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*auth.
 		return nil, status.Errorf(codes.Unauthenticated, "invalid password")
 	}
 
-	cachedToken, _ := s.cache.Get(ctx, "auth:token:"+req.Email).Result()
-	cachedRefresh, _ := s.cache.Get(ctx, "auth:refresh:"+req.Email).Result()
-	if cachedToken != "" && cachedRefresh != "" {
-		return &auth.AuthResponse{
-			Token:        cachedToken,
-			RefreshToken: cachedRefresh,
-			Message:      "Login successful (cached tokens)",
-		}, nil
-	}
-
 	return s.generateAndCacheTokens(ctx, req.Email)
 }
 
