@@ -1,13 +1,11 @@
-# auth-service/Dockerfile
-
-FROM golang:1.25.8-alpine
-
+FROM golang:1.25-alpine AS builder
 WORKDIR /app
-
-COPY . .
-
+COPY go.mod go.sum ./
 RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o auth ./auth-service/cmd/main.go
 
-RUN go build -o auth ./auth-service/cmd/main.go
-
+FROM alpine:3.21
+WORKDIR /app
+COPY --from=builder /app/auth .
 CMD ["./auth"]
