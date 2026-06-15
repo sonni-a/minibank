@@ -1,4 +1,4 @@
-package db
+package redis
 
 import (
 	"context"
@@ -8,9 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var RDB *redis.Client
-
-func ConnectRedis(addr string) *redis.Client {
+func Connect(addr string) *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: "",
@@ -25,6 +23,5 @@ func ConnectRedis(addr string) *redis.Client {
 	}
 
 	log.Println("Connected to Redis:", addr)
-	RDB = rdb
 	return rdb
 }

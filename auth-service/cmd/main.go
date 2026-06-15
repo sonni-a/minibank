@@ -10,7 +10,6 @@ import (
 	"github.com/sonni-a/minibank/pkg/db"
 	"github.com/sonni-a/minibank/pkg/migrate"
 	pkgredis "github.com/sonni-a/minibank/pkg/redis"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -21,14 +20,14 @@ func main() {
 
 	migrate.Run(dbConn, "file://auth-service/internal/db/migrations")
 
-	rdb := pkgredis.ConnectRedis(os.Getenv("REDIS_ADDR"))
+	rdb := pkgredis.Connect(os.Getenv("REDIS_ADDR"))
 	defer func() {
 		if err := rdb.Close(); err != nil {
 			log.Println("Error closing Redis:", err)
 		}
 	}()
 
-	authService := service.NewAuthService(dbConn)
+	authService := service.NewAuthService(dbConn, rdb)
 
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {

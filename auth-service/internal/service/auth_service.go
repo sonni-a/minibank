@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"github.com/sonni-a/minibank/api/auth"
 	"github.com/sonni-a/minibank/pkg/jwt"
-	pkgredis "github.com/sonni-a/minibank/pkg/redis"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -18,11 +18,12 @@ import (
 
 type AuthService struct {
 	auth.UnimplementedAuthServiceServer
-	db *sql.DB
+	db    *sql.DB
+	cache *redis.Client
 }
 
-func NewAuthService(db *sql.DB) *AuthService {
-	return &AuthService{db: db}
+func NewAuthService(db *sql.DB, cache *redis.Client) *AuthService {
+	return &AuthService{db: db, cache: cache}
 }
 
 func (s *AuthService) Register(ctx context.Context, req *auth.RegisterRequest) (*auth.AuthResponse, error) {
@@ -59,8 +60,8 @@ func (s *AuthService) Login(ctx context.Context, req *auth.LoginRequest) (*auth.
 		return nil, status.Errorf(codes.Unauthenticated, "invalid password")
 	}
 
-	cachedToken, _ := pkgredis.RDB.Get(ctx, "auth:token:"+req.Email).Result()
-	cachedRefresh, _ := pkgredis.RDB.Get(ctx, "auth:refresh:"+req.Email).Result()
+	cachedToken, _ := s.cache.Get(ctx, "auth:token:"+req.Email).Result()
+	cachedRefresh, _ := s.cache.Get(ctx, "auth:refresh:"+req.Email).Result()
 	if cachedToken != "" && cachedRefresh != "" {
 		return &auth.AuthResponse{
 			Token:        cachedToken,
@@ -78,7 +79,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *auth.RefreshTokenRe
 		return nil, status.Errorf(codes.Unauthenticated, "invalid refresh token")
 	}
 
-	cachedRefresh, _ := pkgredis.RDB.Get(ctx, "auth:refresh:"+email).Result()
+	cachedRefresh, _ := s.cache.Get(ctx, "auth:refresh:"+email).Result()
 	if cachedRefresh == "" || cachedRefresh != req.RefreshToken {
 		return nil, status.Errorf(codes.Unauthenticated, "refresh token expired or not found")
 	}
@@ -106,7 +107,7 @@ func (s *AuthService) DeleteAuthUser(ctx context.Context, req *auth.DeleteAuthUs
 		return nil, status.Errorf(codes.NotFound, "user not found")
 	}
 
-	_ = pkgredis.RDB.Del(ctx, "auth:token:"+req.Email, "auth:refresh:"+req.Email).Err()
+	_ = s.cache.Del(ctx, "auth:token:"+req.Email, "auth:refresh:"+req.Email).Err()
 
 	return &auth.DeleteAuthUserResponse{Message: "auth user deleted"}, nil
 }
@@ -124,12 +125,12 @@ func (s *AuthService) generateAndCacheTokens(ctx context.Context, email string) 
 		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
-	err = pkgredis.RDB.Set(ctx, "auth:token:"+email, token, 15*time.Minute).Err()
+	err = s.cache.Set(ctx, "auth:token:"+email, token, 15*time.Minute).Err()
 	if err != nil {
 		log.Println("Redis set access token error:", err)
 	}
 
-	err = pkgredis.RDB.Set(ctx, "auth:refresh:"+email, refreshToken, 7*24*time.Hour).Err()
+	err = s.cache.Set(ctx, "auth:refresh:"+email, refreshToken, 7*24*time.Hour).Err()
 	if err != nil {
 		log.Println("Redis set refresh token error:", err)
 	}
