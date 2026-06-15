@@ -64,68 +64,85 @@ curl http://localhost:8080/health
 - user-service (gRPC): `localhost:50052`
 - payment-service (gRPC): `localhost:50053`
 
-## Примеры использования
+## HTTP API (gateway :8080)
 
-### 1) HTTP через gateway
+### Публичные роуты
 
 Проверка здоровья:
-
 ```bash
 curl http://localhost:8080/health
 ```
 
-Регистрация (gateway оркестрирует auth + user + payment):
-
+Регистрация (создаёт auth-запись, профиль и счёт за один запрос):
 ```bash
 curl -X POST http://localhost:8080/api/v1/register \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"Alice\",\"email\":\"alice@example.com\",\"password\":\"secret123\"}"
+  -d '{"name":"Alice","email":"alice@example.com","password":"secret123"}'
 ```
-
-### 2) gRPC через grpcurl
 
 Логин:
-
 ```bash
-grpcurl -plaintext -d "{\"email\":\"alice@example.com\",\"password\":\"secret123\"}" \
-  localhost:50051 auth.AuthService/Login
+curl -X POST http://localhost:8080/api/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@example.com","password":"secret123"}'
 ```
 
-После логина сохранить `token` и использовать его как `Bearer` metadata для защищенных методов:
-
+Обновление access-токена:
 ```bash
-grpcurl -plaintext -H "authorization: Bearer <ACCESS_TOKEN>" -d "{}" \
-  localhost:50052 user.UserService/GetMyUser
+curl -X POST http://localhost:8080/api/v1/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"<REFRESH_TOKEN>"}'
 ```
 
-Пополнение счета:
+### Защищенные роуты (требуют `Authorization: Bearer <ACCESS_TOKEN>`)
 
+Мой профиль:
 ```bash
-grpcurl -plaintext -H "authorization: Bearer <ACCESS_TOKEN>" \
-  -d "{\"amount_minor\":10000}" \
-  localhost:50053 payment.PaymentService/Deposit
+curl http://localhost:8080/api/v1/me \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+Обновить профиль:
+```bash
+curl -X PUT http://localhost:8080/api/v1/me \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice Smith","email":"alice@example.com"}'
+```
+
+Удалить аккаунт:
+```bash
+curl -X DELETE http://localhost:8080/api/v1/me \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+Баланс:
+```bash
+curl http://localhost:8080/api/v1/balance \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+Пополнение счёта (сумма в копейках):
+```bash
+curl -X POST http://localhost:8080/api/v1/deposit \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"amount_minor":10000}'
 ```
 
 Перевод:
-
 ```bash
-grpcurl -plaintext -H "authorization: Bearer <ACCESS_TOKEN>" \
-  -d "{\"to_user_id\":2,\"amount_minor\":5000}" \
-  localhost:50053 payment.PaymentService/Transfer
+curl -X POST http://localhost:8080/api/v1/transfer \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"to_user_id":2,"amount_minor":5000}'
 ```
 
-Refresh токена:
+### gRPC напрямую (через grpcurl)
 
 ```bash
-grpcurl -plaintext -d "{\"refresh_token\":\"<REFRESH_TOKEN>\"}" \
-  localhost:50051 auth.AuthService/RefreshToken
-```
-
-Проверка баланса:
-
-```bash
-grpcurl -plaintext -H "authorization: Bearer <ACCESS_TOKEN>" -d "{}" \
-  localhost:50053 payment.PaymentService/GetBalance
+grpcurl -plaintext -d '{"email":"alice@example.com","password":"secret123"}' \
+  localhost:50051 auth.AuthService/Login
 ```
 
 
