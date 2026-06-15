@@ -15,15 +15,19 @@ type ctxKey string
 
 const UserEmailKey ctxKey = "user_email"
 
-func AuthInterceptor() grpc.UnaryServerInterceptor {
+func AuthInterceptor(publicMethods ...string) grpc.UnaryServerInterceptor {
+	public := make(map[string]bool, len(publicMethods))
+	for _, m := range publicMethods {
+		public[m] = true
+	}
+
 	return func(
 		ctx context.Context,
 		req interface{},
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-
-		if strings.Contains(info.FullMethod, "CreateUser") {
+		if public[info.FullMethod] {
 			return handler(ctx, req)
 		}
 
@@ -44,8 +48,6 @@ func AuthInterceptor() grpc.UnaryServerInterceptor {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid access token")
 		}
 
-		newCtx := context.WithValue(ctx, UserEmailKey, email)
-
-		return handler(newCtx, req)
+		return handler(context.WithValue(ctx, UserEmailKey, email), req)
 	}
 }
