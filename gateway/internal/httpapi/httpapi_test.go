@@ -12,6 +12,7 @@ import (
 	userpb "github.com/sonni-a/minibank/api/user"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -214,7 +215,10 @@ func TestRegister_Success(t *testing.T) {
 		&stubAuthClient{registerFn: func(context.Context, *authpb.RegisterRequest) (*authpb.AuthResponse, error) {
 			return &authpb.AuthResponse{Token: "access", RefreshToken: "refresh"}, nil
 		}},
-		&stubUserClient{createUserFn: func(_ context.Context, req *userpb.CreateUserRequest) (*userpb.UserResponse, error) {
+		&stubUserClient{createUserFn: func(ctx context.Context, req *userpb.CreateUserRequest) (*userpb.UserResponse, error) {
+			if got := bearerFromCtx(ctx); got != "Bearer access" {
+				t.Fatalf("CreateUser authorization = %q, want Bearer access", got)
+			}
 			return &userpb.UserResponse{Id: 1, Name: req.Name, Email: req.Email}, nil
 		}},
 		&stubPaymentClient{createAccountFn: func(_ context.Context, req *paymentpb.CreateAccountRequest) (*paymentpb.AccountResponse, error) {
@@ -233,6 +237,93 @@ func TestRegister_Success(t *testing.T) {
 	if !strings.Contains(w.Body.String(), `"user_id":1`) {
 		t.Fatalf("body = %q", w.Body.String())
 	}
+}
+
+func TestRegister_CreateUserFailure_DeletesAuthWithToken(t *testing.T) {
+	var deletedWith string
+	s := newTestServer(
+		&stubAuthClient{
+			registerFn: func(context.Context, *authpb.RegisterRequest) (*authpb.AuthResponse, error) {
+				return &authpb.AuthResponse{Token: "access", RefreshToken: "refresh"}, nil
+			},
+			deleteAuthFn: func(ctx context.Context, req *authpb.DeleteAuthUserRequest) (*authpb.DeleteAuthUserResponse, error) {
+				deletedWith = bearerFromCtx(ctx)
+				if req.Email != testEmail {
+					t.Fatalf("email = %q, want %s", req.Email, testEmail)
+				}
+				return &authpb.DeleteAuthUserResponse{}, nil
+			},
+		},
+		&stubUserClient{createUserFn: func(context.Context, *userpb.CreateUserRequest) (*userpb.UserResponse, error) {
+			return nil, status.Error(codes.Internal, "user db down")
+		}},
+		&stubPaymentClient{},
+	)
+
+	body := `{"name":"Alice","email":"` + testEmail + `","password":"` + testPassword + `"}`
+	w := serve(s, http.MethodPost, "/api/v1/register", body, nil)
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want 502, body = %s", w.Code, w.Body.String())
+	}
+	if deletedWith != "Bearer access" {
+		t.Fatalf("DeleteAuthUser authorization = %q, want Bearer access", deletedWith)
+	}
+}
+
+func TestRegister_CreateAccountFailure_DeletesAuthWithToken(t *testing.T) {
+	var deletedWith string
+	s := newTestServer(
+		&stubAuthClient{
+			registerFn: func(context.Context, *authpb.RegisterRequest) (*authpb.AuthResponse, error) {
+				return &authpb.AuthResponse{Token: "access", RefreshToken: "refresh"}, nil
+			},
+			deleteAuthFn: func(ctx context.Context, req *authpb.DeleteAuthUserRequest) (*authpb.DeleteAuthUserResponse, error) {
+				deletedWith = bearerFromCtx(ctx)
+				if req.Email != testEmail {
+					t.Fatalf("email = %q, want %s", req.Email, testEmail)
+				}
+				return &authpb.DeleteAuthUserResponse{}, nil
+			},
+		},
+		&stubUserClient{
+			createUserFn: func(context.Context, *userpb.CreateUserRequest) (*userpb.UserResponse, error) {
+				return &userpb.UserResponse{Id: 1, Name: "Alice", Email: testEmail}, nil
+			},
+			deleteUserFn: func(ctx context.Context, req *userpb.DeleteUserRequest) (*userpb.DeleteUserResponse, error) {
+				if got := bearerFromCtx(ctx); got != "Bearer access" {
+					t.Fatalf("DeleteUser authorization = %q, want Bearer access", got)
+				}
+				if req.Id != 1 {
+					t.Fatalf("user id = %d, want 1", req.Id)
+				}
+				return &userpb.DeleteUserResponse{}, nil
+			},
+		},
+		&stubPaymentClient{createAccountFn: func(context.Context, *paymentpb.CreateAccountRequest) (*paymentpb.AccountResponse, error) {
+			return nil, status.Error(codes.Internal, "payment db down")
+		}},
+	)
+
+	body := `{"name":"Alice","email":"` + testEmail + `","password":"` + testPassword + `"}`
+	w := serve(s, http.MethodPost, "/api/v1/register", body, nil)
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want 502, body = %s", w.Code, w.Body.String())
+	}
+	if deletedWith != "Bearer access" {
+		t.Fatalf("DeleteAuthUser authorization = %q, want Bearer access", deletedWith)
+	}
+}
+
+func bearerFromCtx(ctx context.Context) string {
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return ""
+	}
+	vals := md.Get("authorization")
+	if len(vals) == 0 {
+		return ""
+	}
+	return vals[0]
 }
 
 func TestLogin_InvalidRequest(t *testing.T) {

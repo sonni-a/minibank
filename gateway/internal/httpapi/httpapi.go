@@ -184,7 +184,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	userCtx, cancelUser := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancelUser()
-	userResp, err := s.user.CreateUser(userCtx, &userpb.CreateUserRequest{
+	userResp, err := s.user.CreateUser(withBearer(userCtx, authResp.Token), &userpb.CreateUserRequest{
 		Name:  body.Name,
 		Email: body.Email,
 	})
@@ -192,7 +192,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		slog.Error("CreateUser after Register failed", "error", err)
 		compCtx, compCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer compCancel()
-		if cerr := s.compensateAuth(compCtx, body.Email); cerr != nil {
+		if cerr := s.compensateAuth(compCtx, authResp.Token, body.Email); cerr != nil {
 			slog.Error("compensate auth after CreateUser failure", "error", cerr)
 		}
 		writeGRPCError(w, err)
@@ -226,8 +226,8 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) compensateAuth(ctx context.Context, email string) error {
-	_, err := s.auth.DeleteAuthUser(ctx, &authpb.DeleteAuthUserRequest{Email: email})
+func (s *Server) compensateAuth(ctx context.Context, token, email string) error {
+	_, err := s.auth.DeleteAuthUser(withBearer(ctx, token), &authpb.DeleteAuthUserRequest{Email: email})
 	return err
 }
 
@@ -239,7 +239,7 @@ func (s *Server) compensateUserAndAuth(ctx context.Context, token string, userID
 		firstErr = err
 	}
 
-	if _, err := s.auth.DeleteAuthUser(ctx, &authpb.DeleteAuthUserRequest{Email: email}); err != nil && firstErr == nil {
+	if _, err := s.auth.DeleteAuthUser(userCtx, &authpb.DeleteAuthUserRequest{Email: email}); err != nil && firstErr == nil {
 		firstErr = err
 	}
 
