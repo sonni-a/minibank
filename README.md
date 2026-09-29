@@ -20,24 +20,14 @@
 - `auth-service` - регистрация, логин, refresh токена
 - `user-service` - операции с профилем пользователя
 - `payment-service` - счет, баланс, пополнение, перевод
-- `gateway` - HTTP-вход и взаимодействие между gRPC-сервисами
-
-## Функциональность
-
-- Регистрация и авторизация пользователей
-- Генерация и валидация access/refresh JWT
-- CRUD для пользователей
-- Создание счета
-- Пополнение счета
-- Получение баланса
-- Перевод между счетами с транзакцией
+- `gateway` - HTTP-вход к gRPC-сервисам
 
 ## Как запустить проект
 
 1. Склонировать репозиторий:
 
 ```bash
-git clone github.com/sonni-a/minibank.git
+git clone https://github.com/sonni-a/minibank.git
 cd minibank
 ```
 
@@ -89,7 +79,7 @@ curl -X POST http://localhost:8080/api/v1/login \
   -d '{"email":"alice@example.com","password":"secret123"}'
 ```
 
-Обновление access-токена:
+Обновление токенов. Старый refresh после этого перестаёт действовать:
 ```bash
 curl -X POST http://localhost:8080/api/v1/refresh \
   -H "Content-Type: application/json" \
@@ -104,7 +94,7 @@ curl http://localhost:8080/api/v1/me \
   -H "Authorization: Bearer <ACCESS_TOKEN>"
 ```
 
-Обновить профиль:
+Обновить имя. Email в теле должен совпасть с текущим, иначе профиль не изменится:
 ```bash
 curl -X PUT http://localhost:8080/api/v1/me \
   -H "Authorization: Bearer <ACCESS_TOKEN>" \
