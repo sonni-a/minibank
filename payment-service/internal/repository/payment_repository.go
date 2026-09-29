@@ -10,6 +10,7 @@ var (
 	ErrSenderNotFound    = errors.New("sender account missing")
 	ErrRecipientNotFound = errors.New("recipient account not found")
 	ErrAccountNotFound   = errors.New("account not found")
+	ErrBalanceNotZero    = errors.New("account balance is not zero")
 )
 
 type PaymentRepository struct {
@@ -90,6 +91,33 @@ func (r *PaymentRepository) Transfer(fromID, toID int64, amount int64) error {
 	}
 
 	return tx.Commit()
+}
+
+func (r *PaymentRepository) DeleteAccount(userID int64) error {
+	res, err := r.db.Exec(
+		"DELETE FROM accounts WHERE user_id=$1 AND balance = 0",
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 1 {
+		return nil
+	}
+
+	var balance int64
+	err = r.db.QueryRow("SELECT balance FROM accounts WHERE user_id=$1", userID).Scan(&balance)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrAccountNotFound
+	}
+	if err != nil {
+		return err
+	}
+	return ErrBalanceNotZero
 }
 
 func (r *PaymentRepository) Deposit(userID int64, amount int64) error {

@@ -95,6 +95,7 @@ type stubPaymentClient struct {
 	getBalanceFn    func(context.Context, *paymentpb.GetBalanceRequest) (*paymentpb.BalanceResponse, error)
 	depositFn       func(context.Context, *paymentpb.DepositRequest) (*paymentpb.BalanceResponse, error)
 	transferFn      func(context.Context, *paymentpb.TransferRequest) (*paymentpb.TransferResponse, error)
+	deleteAccountFn func(context.Context, *paymentpb.DeleteAccountRequest) (*paymentpb.DeleteAccountResponse, error)
 }
 
 func (s *stubPaymentClient) CreateAccount(ctx context.Context, req *paymentpb.CreateAccountRequest, _ ...grpc.CallOption) (*paymentpb.AccountResponse, error) {
@@ -123,6 +124,13 @@ func (s *stubPaymentClient) Transfer(ctx context.Context, req *paymentpb.Transfe
 		return s.transferFn(ctx, req)
 	}
 	panic("Transfer not stubbed")
+}
+
+func (s *stubPaymentClient) DeleteAccount(ctx context.Context, req *paymentpb.DeleteAccountRequest, _ ...grpc.CallOption) (*paymentpb.DeleteAccountResponse, error) {
+	if s.deleteAccountFn != nil {
+		return s.deleteAccountFn(ctx, req)
+	}
+	panic("DeleteAccount not stubbed")
 }
 
 func newTestServer(auth authpb.AuthServiceClient, user userpb.UserServiceClient, payment paymentpb.PaymentServiceClient) *Server {
@@ -419,6 +427,71 @@ func TestUpdateMe_EmailChange_ReturnsBadRequest(t *testing.T) {
 		t.Fatalf("status = %d, want 400, body = %s", w.Code, w.Body.String())
 	}
 	if !strings.Contains(w.Body.String(), "email cannot be changed") {
+		t.Fatalf("body = %q", w.Body.String())
+	}
+}
+
+func TestDeleteMe_ZeroBalance_DeletesAccountAuthAndProfile(t *testing.T) {
+	var steps []string
+	s := newTestServer(
+		&stubAuthClient{deleteAuthFn: func(ctx context.Context, req *authpb.DeleteAuthUserRequest) (*authpb.DeleteAuthUserResponse, error) {
+			if got := bearerFromCtx(ctx); got != bearer {
+				t.Fatalf("DeleteAuthUser authorization = %q, want %s", got, bearer)
+			}
+			if req.Email != testEmail {
+				t.Fatalf("email = %q, want %s", req.Email, testEmail)
+			}
+			steps = append(steps, "auth")
+			return &authpb.DeleteAuthUserResponse{}, nil
+		}},
+		&stubUserClient{
+			getMyUserFn: func(context.Context, *userpb.GetMyUserRequest) (*userpb.UserResponse, error) {
+				return &userpb.UserResponse{Id: 1, Name: "Alice", Email: testEmail}, nil
+			},
+			deleteUserFn: func(_ context.Context, req *userpb.DeleteUserRequest) (*userpb.DeleteUserResponse, error) {
+				if req.Id != 1 {
+					t.Fatalf("user id = %d, want 1", req.Id)
+				}
+				steps = append(steps, "user")
+				return &userpb.DeleteUserResponse{}, nil
+			},
+		},
+		&stubPaymentClient{
+			getBalanceFn: func(context.Context, *paymentpb.GetBalanceRequest) (*paymentpb.BalanceResponse, error) {
+				return &paymentpb.BalanceResponse{BalanceMinor: 0}, nil
+			},
+			deleteAccountFn: func(context.Context, *paymentpb.DeleteAccountRequest) (*paymentpb.DeleteAccountResponse, error) {
+				steps = append(steps, "account")
+				return &paymentpb.DeleteAccountResponse{}, nil
+			},
+		},
+	)
+
+	w := serve(s, http.MethodDelete, "/api/v1/me", "", map[string]string{"Authorization": bearer})
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body = %s", w.Code, w.Body.String())
+	}
+	if strings.Join(steps, ",") != "account,auth,user" {
+		t.Fatalf("steps = %v, want account, auth, user", steps)
+	}
+}
+
+func TestDeleteMe_NonZeroBalance_DeletesNothing(t *testing.T) {
+	s := newTestServer(
+		&stubAuthClient{},
+		&stubUserClient{getMyUserFn: func(context.Context, *userpb.GetMyUserRequest) (*userpb.UserResponse, error) {
+			return &userpb.UserResponse{Id: 1, Email: testEmail}, nil
+		}},
+		&stubPaymentClient{getBalanceFn: func(context.Context, *paymentpb.GetBalanceRequest) (*paymentpb.BalanceResponse, error) {
+			return &paymentpb.BalanceResponse{BalanceMinor: 100}, nil
+		}},
+	)
+
+	w := serve(s, http.MethodDelete, "/api/v1/me", "", map[string]string{"Authorization": bearer})
+	if w.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409, body = %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "account balance is not zero") {
 		t.Fatalf("body = %q", w.Body.String())
 	}
 }

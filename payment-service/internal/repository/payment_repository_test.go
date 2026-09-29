@@ -138,6 +138,59 @@ func TestDeposit_Success(t *testing.T) {
 	}
 }
 
+func TestDeleteAccount_ZeroBalance_DeletesRow(t *testing.T) {
+	repo, mock := setupRepo(t)
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM accounts WHERE user_id=$1 AND balance = 0")).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	if err := repo.DeleteAccount(1); err != nil {
+		t.Fatalf("DeleteAccount: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestDeleteAccount_NonZeroBalance_ReturnsError(t *testing.T) {
+	repo, mock := setupRepo(t)
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM accounts WHERE user_id=$1 AND balance = 0")).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT balance FROM accounts WHERE user_id=$1")).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(int64(50)))
+
+	err := repo.DeleteAccount(1)
+	if !errors.Is(err, ErrBalanceNotZero) {
+		t.Fatalf("expected ErrBalanceNotZero, got %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestDeleteAccount_Missing_ReturnsNotFound(t *testing.T) {
+	repo, mock := setupRepo(t)
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM accounts WHERE user_id=$1 AND balance = 0")).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT balance FROM accounts WHERE user_id=$1")).
+		WithArgs(int64(1)).
+		WillReturnError(sql.ErrNoRows)
+
+	err := repo.DeleteAccount(1)
+	if !errors.Is(err, ErrAccountNotFound) {
+		t.Fatalf("expected ErrAccountNotFound, got %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
 func TestCreateAccount_Success(t *testing.T) {
 	repo, mock := setupRepo(t)
 

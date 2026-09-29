@@ -112,7 +112,7 @@ curl -X PUT http://localhost:8080/api/v1/me \
   -d '{"name":"Alice Smith","email":"alice@example.com"}'
 ```
 
-Удалить аккаунт:
+Удалить аккаунт. Если на счёте есть деньги, ничего не удаляется: ни счёт, ни профиль, ни логин.
 ```bash
 curl -X DELETE http://localhost:8080/api/v1/me \
   -H "Authorization: Bearer <ACCESS_TOKEN>"

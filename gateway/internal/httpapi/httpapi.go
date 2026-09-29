@@ -410,14 +410,34 @@ func (s *Server) handleDeleteMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := s.user.DeleteUser(ctx, &userpb.DeleteUserRequest{Id: meResp.Id})
-	if err != nil {
+	balance, err := s.payment.GetBalance(ctx, &paymentpb.GetBalanceRequest{})
+	if err != nil && status.Code(err) != codes.NotFound {
+		writeGRPCError(w, err)
+		return
+	}
+	if err == nil && balance.BalanceMinor != 0 {
+		http.Error(w, "account balance is not zero", http.StatusConflict)
+		return
+	}
+	if err == nil {
+		if _, err := s.payment.DeleteAccount(ctx, &paymentpb.DeleteAccountRequest{}); err != nil {
+			writeGRPCError(w, err)
+			return
+		}
+	}
+
+	if _, err := s.auth.DeleteAuthUser(ctx, &authpb.DeleteAuthUserRequest{Email: meResp.Email}); err != nil {
+		writeGRPCError(w, err)
+		return
+	}
+
+	if _, err := s.user.DeleteUser(ctx, &userpb.DeleteUserRequest{Id: meResp.Id}); err != nil {
 		writeGRPCError(w, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "account deleted"})
 }
 
 func (s *Server) handleGetBalance(w http.ResponseWriter, r *http.Request) {

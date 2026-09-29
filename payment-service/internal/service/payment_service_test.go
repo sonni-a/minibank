@@ -98,6 +98,56 @@ func TestCreateAccount_OtherUserID_ReturnsPermissionDenied(t *testing.T) {
 	}
 }
 
+func TestDeleteAccount_OtherUserID_ReturnsPermissionDenied(t *testing.T) {
+	svc, mock := setupPaymentService(t, 1)
+
+	_, err := svc.DeleteAccount(ctxWithMetadata(), &payment.DeleteAccountRequest{UserId: 9})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v (err=%v)", status.Code(err), err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestDeleteAccount_ZeroBalance_Succeeds(t *testing.T) {
+	svc, mock := setupPaymentService(t, 1)
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM accounts WHERE user_id=$1 AND balance = 0")).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	resp, err := svc.DeleteAccount(ctxWithMetadata(), &payment.DeleteAccountRequest{})
+	if err != nil {
+		t.Fatalf("DeleteAccount: %v", err)
+	}
+	if resp.Message != "account deleted" {
+		t.Fatalf("message = %q, want account deleted", resp.Message)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestDeleteAccount_NonZeroBalance_ReturnsFailedPrecondition(t *testing.T) {
+	svc, mock := setupPaymentService(t, 1)
+
+	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM accounts WHERE user_id=$1 AND balance = 0")).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT balance FROM accounts WHERE user_id=$1")).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"balance"}).AddRow(int64(50)))
+
+	_, err := svc.DeleteAccount(ctxWithMetadata(), &payment.DeleteAccountRequest{})
+	if status.Code(err) != codes.FailedPrecondition {
+		t.Fatalf("expected FailedPrecondition, got %v (err=%v)", status.Code(err), err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
 func TestGetBalance_WithoutMetadata_ReturnsUnauthenticated(t *testing.T) {
 	svc := &PaymentService{}
 

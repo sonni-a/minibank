@@ -361,6 +361,94 @@ func (x *TransferResponse) GetMessage() string {
 	return ""
 }
 
+type DeleteAccountRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAccountRequest) Reset() {
+	*x = DeleteAccountRequest{}
+	mi := &file_payment_service_proto_payment_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAccountRequest) ProtoMessage() {}
+
+func (x *DeleteAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_service_proto_payment_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAccountRequest.ProtoReflect.Descriptor instead.
+func (*DeleteAccountRequest) Descriptor() ([]byte, []int) {
+	return file_payment_service_proto_payment_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteAccountRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+type DeleteAccountResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAccountResponse) Reset() {
+	*x = DeleteAccountResponse{}
+	mi := &file_payment_service_proto_payment_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAccountResponse) ProtoMessage() {}
+
+func (x *DeleteAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_service_proto_payment_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAccountResponse.ProtoReflect.Descriptor instead.
+func (*DeleteAccountResponse) Descriptor() ([]byte, []int) {
+	return file_payment_service_proto_payment_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DeleteAccountResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_payment_service_proto_payment_proto protoreflect.FileDescriptor
 
 const file_payment_service_proto_payment_proto_rawDesc = "" +
@@ -385,13 +473,18 @@ const file_payment_service_proto_payment_proto_rawDesc = "" +
 	"\x0fBalanceResponse\x12#\n" +
 	"\rbalance_minor\x18\x01 \x01(\x03R\fbalanceMinor\",\n" +
 	"\x10TransferResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\x9d\x02\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"/\n" +
+	"\x14DeleteAccountRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\"1\n" +
+	"\x15DeleteAccountResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\xed\x02\n" +
 	"\x0ePaymentService\x12H\n" +
 	"\rCreateAccount\x12\x1d.payment.CreateAccountRequest\x1a\x18.payment.AccountResponse\x12B\n" +
 	"\n" +
 	"GetBalance\x12\x1a.payment.GetBalanceRequest\x1a\x18.payment.BalanceResponse\x12<\n" +
 	"\aDeposit\x12\x17.payment.DepositRequest\x1a\x18.payment.BalanceResponse\x12?\n" +
-	"\bTransfer\x12\x18.payment.TransferRequest\x1a\x19.payment.TransferResponseB1Z/github.com/sonni-a/minibank/api/payment;paymentb\x06proto3"
+	"\bTransfer\x12\x18.payment.TransferRequest\x1a\x19.payment.TransferResponse\x12N\n" +
+	"\rDeleteAccount\x12\x1d.payment.DeleteAccountRequest\x1a\x1e.payment.DeleteAccountResponseB1Z/github.com/sonni-a/minibank/api/payment;paymentb\x06proto3"
 
 var (
 	file_payment_service_proto_payment_proto_rawDescOnce sync.Once
@@ -405,27 +498,31 @@ func file_payment_service_proto_payment_proto_rawDescGZIP() []byte {
 	return file_payment_service_proto_payment_proto_rawDescData
 }
 
-var file_payment_service_proto_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_payment_service_proto_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_payment_service_proto_payment_proto_goTypes = []any{
-	(*CreateAccountRequest)(nil), // 0: payment.CreateAccountRequest
-	(*GetBalanceRequest)(nil),    // 1: payment.GetBalanceRequest
-	(*DepositRequest)(nil),       // 2: payment.DepositRequest
-	(*TransferRequest)(nil),      // 3: payment.TransferRequest
-	(*AccountResponse)(nil),      // 4: payment.AccountResponse
-	(*BalanceResponse)(nil),      // 5: payment.BalanceResponse
-	(*TransferResponse)(nil),     // 6: payment.TransferResponse
+	(*CreateAccountRequest)(nil),  // 0: payment.CreateAccountRequest
+	(*GetBalanceRequest)(nil),     // 1: payment.GetBalanceRequest
+	(*DepositRequest)(nil),        // 2: payment.DepositRequest
+	(*TransferRequest)(nil),       // 3: payment.TransferRequest
+	(*AccountResponse)(nil),       // 4: payment.AccountResponse
+	(*BalanceResponse)(nil),       // 5: payment.BalanceResponse
+	(*TransferResponse)(nil),      // 6: payment.TransferResponse
+	(*DeleteAccountRequest)(nil),  // 7: payment.DeleteAccountRequest
+	(*DeleteAccountResponse)(nil), // 8: payment.DeleteAccountResponse
 }
 var file_payment_service_proto_payment_proto_depIdxs = []int32{
 	0, // 0: payment.PaymentService.CreateAccount:input_type -> payment.CreateAccountRequest
 	1, // 1: payment.PaymentService.GetBalance:input_type -> payment.GetBalanceRequest
 	2, // 2: payment.PaymentService.Deposit:input_type -> payment.DepositRequest
 	3, // 3: payment.PaymentService.Transfer:input_type -> payment.TransferRequest
-	4, // 4: payment.PaymentService.CreateAccount:output_type -> payment.AccountResponse
-	5, // 5: payment.PaymentService.GetBalance:output_type -> payment.BalanceResponse
-	5, // 6: payment.PaymentService.Deposit:output_type -> payment.BalanceResponse
-	6, // 7: payment.PaymentService.Transfer:output_type -> payment.TransferResponse
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	7, // 4: payment.PaymentService.DeleteAccount:input_type -> payment.DeleteAccountRequest
+	4, // 5: payment.PaymentService.CreateAccount:output_type -> payment.AccountResponse
+	5, // 6: payment.PaymentService.GetBalance:output_type -> payment.BalanceResponse
+	5, // 7: payment.PaymentService.Deposit:output_type -> payment.BalanceResponse
+	6, // 8: payment.PaymentService.Transfer:output_type -> payment.TransferResponse
+	8, // 9: payment.PaymentService.DeleteAccount:output_type -> payment.DeleteAccountResponse
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -442,7 +539,7 @@ func file_payment_service_proto_payment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_service_proto_payment_proto_rawDesc), len(file_payment_service_proto_payment_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

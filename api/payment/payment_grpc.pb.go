@@ -23,6 +23,7 @@ const (
 	PaymentService_GetBalance_FullMethodName    = "/payment.PaymentService/GetBalance"
 	PaymentService_Deposit_FullMethodName       = "/payment.PaymentService/Deposit"
 	PaymentService_Transfer_FullMethodName      = "/payment.PaymentService/Transfer"
+	PaymentService_DeleteAccount_FullMethodName = "/payment.PaymentService/DeleteAccount"
 )
 
 // PaymentServiceClient is the client API for PaymentService service.
@@ -33,6 +34,7 @@ type PaymentServiceClient interface {
 	GetBalance(ctx context.Context, in *GetBalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, error)
 	Deposit(ctx context.Context, in *DepositRequest, opts ...grpc.CallOption) (*BalanceResponse, error)
 	Transfer(ctx context.Context, in *TransferRequest, opts ...grpc.CallOption) (*TransferResponse, error)
+	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*DeleteAccountResponse, error)
 }
 
 type paymentServiceClient struct {
@@ -83,6 +85,16 @@ func (c *paymentServiceClient) Transfer(ctx context.Context, in *TransferRequest
 	return out, nil
 }
 
+func (c *paymentServiceClient) DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*DeleteAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteAccountResponse)
+	err := c.cc.Invoke(ctx, PaymentService_DeleteAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PaymentServiceServer is the server API for PaymentService service.
 // All implementations must embed UnimplementedPaymentServiceServer
 // for forward compatibility.
@@ -91,6 +103,7 @@ type PaymentServiceServer interface {
 	GetBalance(context.Context, *GetBalanceRequest) (*BalanceResponse, error)
 	Deposit(context.Context, *DepositRequest) (*BalanceResponse, error)
 	Transfer(context.Context, *TransferRequest) (*TransferResponse, error)
+	DeleteAccount(context.Context, *DeleteAccountRequest) (*DeleteAccountResponse, error)
 	mustEmbedUnimplementedPaymentServiceServer()
 }
 
@@ -112,6 +125,9 @@ func (UnimplementedPaymentServiceServer) Deposit(context.Context, *DepositReques
 }
 func (UnimplementedPaymentServiceServer) Transfer(context.Context, *TransferRequest) (*TransferResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Transfer not implemented")
+}
+func (UnimplementedPaymentServiceServer) DeleteAccount(context.Context, *DeleteAccountRequest) (*DeleteAccountResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteAccount not implemented")
 }
 func (UnimplementedPaymentServiceServer) mustEmbedUnimplementedPaymentServiceServer() {}
 func (UnimplementedPaymentServiceServer) testEmbeddedByValue()                        {}
@@ -206,6 +222,24 @@ func _PaymentService_Transfer_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaymentService_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentServiceServer).DeleteAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentService_DeleteAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentServiceServer).DeleteAccount(ctx, req.(*DeleteAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PaymentService_ServiceDesc is the grpc.ServiceDesc for PaymentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,6 +262,10 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Transfer",
 			Handler:    _PaymentService_Transfer_Handler,
+		},
+		{
+			MethodName: "DeleteAccount",
+			Handler:    _PaymentService_DeleteAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

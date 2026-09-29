@@ -146,3 +146,27 @@ func (s *PaymentService) Deposit(ctx context.Context, req *payment.DepositReques
 		BalanceMinor: balance,
 	}, nil
 }
+
+func (s *PaymentService) DeleteAccount(ctx context.Context, req *payment.DeleteAccountRequest) (*payment.DeleteAccountResponse, error) {
+	myID, err := s.callerUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.UserId != 0 && req.UserId != myID {
+		return nil, status.Errorf(codes.PermissionDenied, "user_id does not match authenticated user")
+	}
+
+	err = s.repo.DeleteAccount(myID)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrAccountNotFound):
+			return nil, status.Errorf(codes.NotFound, "account not found")
+		case errors.Is(err, repository.ErrBalanceNotZero):
+			return nil, status.Errorf(codes.FailedPrecondition, "account balance is not zero")
+		default:
+			return nil, status.Errorf(codes.Internal, "internal server error")
+		}
+	}
+
+	return &payment.DeleteAccountResponse{Message: "account deleted"}, nil
+}

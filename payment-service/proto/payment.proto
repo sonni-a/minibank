@@ -11,6 +11,7 @@ service PaymentService {
   rpc GetBalance(GetBalanceRequest) returns (BalanceResponse);
   rpc Deposit(DepositRequest) returns (BalanceResponse);
   rpc Transfer(TransferRequest) returns (TransferResponse);
+  rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse);
 }
 
 message CreateAccountRequest {
@@ -42,5 +43,13 @@ message BalanceResponse {
 }
 
 message TransferResponse {
+  string message = 1;
+}
+
+message DeleteAccountRequest {
+  int64 user_id = 1;
+}
+
+message DeleteAccountResponse {
   string message = 1;
 }
