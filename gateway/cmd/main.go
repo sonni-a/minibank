@@ -12,6 +12,7 @@ import (
 
 	"github.com/sonni-a/minibank/gateway/internal/httpapi"
 	"github.com/sonni-a/minibank/pkg/env"
+	"github.com/sonni-a/minibank/pkg/grpcclient"
 )
 
 func main() {
@@ -21,7 +22,10 @@ func main() {
 	userAddr := env.Getenv("USER_SERVICE_ADDR", "localhost:50052")
 	payAddr := env.Getenv("PAYMENT_SERVICE_ADDR", "localhost:50053")
 
-	srv, err := httpapi.New(authAddr, userAddr, payAddr)
+	slog.Info("connecting to services", "auth", authAddr, "user", userAddr, "payment", payAddr)
+	dialCtx, dialCancel := context.WithTimeout(context.Background(), grpcclient.DialTimeout)
+	defer dialCancel()
+	srv, err := httpapi.New(dialCtx, authAddr, userAddr, payAddr)
 	if err != nil {
 		slog.Error("failed to init gateway", "error", err)
 		os.Exit(1)

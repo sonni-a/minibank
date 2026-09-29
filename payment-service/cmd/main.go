@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"os"
@@ -14,10 +15,10 @@ import (
 	"github.com/sonni-a/minibank/payment-service/internal/service"
 	"github.com/sonni-a/minibank/pkg/db"
 	"github.com/sonni-a/minibank/pkg/env"
+	"github.com/sonni-a/minibank/pkg/grpcclient"
 	"github.com/sonni-a/minibank/pkg/middleware"
 	"github.com/sonni-a/minibank/pkg/migrate"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -30,7 +31,10 @@ func main() {
 	migrate.Run(dbConn, paydb.FS)
 
 	userAddr := env.Getenv("USER_SERVICE_ADDR", "localhost:50052")
-	userConn, err := grpc.NewClient(userAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	slog.Info("connecting to user-service", "addr", userAddr)
+	dialCtx, dialCancel := context.WithTimeout(context.Background(), grpcclient.DialTimeout)
+	defer dialCancel()
+	userConn, err := grpcclient.Dial(dialCtx, userAddr)
 	if err != nil {
 		slog.Error("failed to connect to user-service", "addr", userAddr, "error", err)
 		os.Exit(1)

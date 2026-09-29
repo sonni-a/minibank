@@ -6,16 +6,17 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	authpb "github.com/sonni-a/minibank/api/auth"
 	paymentpb "github.com/sonni-a/minibank/api/payment"
 	userpb "github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/pkg/env"
+	"github.com/sonni-a/minibank/pkg/grpcclient"
 	"github.com/sonni-a/minibank/pkg/validate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -30,26 +31,38 @@ type Server struct {
 	mux      *http.ServeMux
 }
 
-func New(authAddr, userAddr, paymentAddr string) (*Server, error) {
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+func New(ctx context.Context, authAddr, userAddr, paymentAddr string) (*Server, error) {
+	addrs := []string{authAddr, userAddr, paymentAddr}
+	conns := make([]*grpc.ClientConn, len(addrs))
+	errs := make([]error, len(addrs))
+
+	var wg sync.WaitGroup
+	for i, addr := range addrs {
+		wg.Add(1)
+		go func(i int, addr string) {
+			defer wg.Done()
+			conns[i], errs[i] = grpcclient.Dial(ctx, addr)
+		}(i, addr)
+	}
+	wg.Wait()
+
+	var dialErr error
+	for _, err := range errs {
+		if err != nil {
+			dialErr = err
+			break
+		}
+	}
+	if dialErr != nil {
+		for _, conn := range conns {
+			if conn != nil {
+				_ = conn.Close()
+			}
+		}
+		return nil, dialErr
 	}
 
-	authConn, err := grpc.NewClient(authAddr, opts...)
-	if err != nil {
-		return nil, err
-	}
-	userConn, err := grpc.NewClient(userAddr, opts...)
-	if err != nil {
-		_ = authConn.Close()
-		return nil, err
-	}
-	payConn, err := grpc.NewClient(paymentAddr, opts...)
-	if err != nil {
-		_ = authConn.Close()
-		_ = userConn.Close()
-		return nil, err
-	}
+	authConn, userConn, payConn := conns[0], conns[1], conns[2]
 
 	s := &Server{
 		authConn: authConn,
