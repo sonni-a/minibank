@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 
+	"github.com/lib/pq"
 	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/payment-service/internal/repository"
@@ -12,6 +14,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+const pgUniqueViolation = "23505"
 
 type PaymentService struct {
 	repo *repository.PaymentRepository
@@ -49,7 +53,11 @@ func (s *PaymentService) CreateAccount(ctx context.Context, req *payment.CreateA
 
 	err = s.repo.CreateAccount(myID)
 	if err != nil {
-		return nil, status.Errorf(codes.AlreadyExists, "account already exists")
+		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == pgUniqueViolation {
+			return nil, status.Errorf(codes.AlreadyExists, "account already exists")
+		}
+		slog.Error("CreateAccount db error", "error", err)
+		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
 	return &payment.AccountResponse{

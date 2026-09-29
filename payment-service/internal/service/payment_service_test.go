@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/lib/pq"
 	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/api/user"
 	"github.com/sonni-a/minibank/payment-service/internal/repository"
@@ -80,6 +81,38 @@ func TestCreateAccount_WithUserID_Success(t *testing.T) {
 	}
 	if resp.UserId != 5 || resp.BalanceMinor != 0 {
 		t.Fatalf("unexpected response: %+v", resp)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestCreateAccount_Duplicate_ReturnsAlreadyExists(t *testing.T) {
+	svc, mock := setupPaymentService(t, 5)
+
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO accounts (user_id, balance) VALUES ($1, 0)")).
+		WithArgs(int64(5)).
+		WillReturnError(&pq.Error{Code: pgUniqueViolation})
+
+	_, err := svc.CreateAccount(ctxWithMetadata(), &payment.CreateAccountRequest{UserId: 5})
+	if status.Code(err) != codes.AlreadyExists {
+		t.Fatalf("expected AlreadyExists, got %v (err=%v)", status.Code(err), err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestCreateAccount_DBError_ReturnsInternal(t *testing.T) {
+	svc, mock := setupPaymentService(t, 5)
+
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO accounts (user_id, balance) VALUES ($1, 0)")).
+		WithArgs(int64(5)).
+		WillReturnError(sql.ErrConnDone)
+
+	_, err := svc.CreateAccount(ctxWithMetadata(), &payment.CreateAccountRequest{UserId: 5})
+	if status.Code(err) != codes.Internal {
+		t.Fatalf("expected Internal, got %v (err=%v)", status.Code(err), err)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet sql expectations: %v", err)
