@@ -157,6 +157,52 @@ func TestUpdateUser_InvalidInput_ReturnsInvalidArgument(t *testing.T) {
 	}
 }
 
+func TestUpdateUser_EmailChange_ReturnsInvalidArgument(t *testing.T) {
+	svc, mock := setupUserService(t)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, email FROM users WHERE id=$1")).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email"}).AddRow(int64(1), testName, testEmail))
+
+	_, err := svc.UpdateUser(ctxWithEmail(testEmail), &user.UpdateUserRequest{
+		Id:    1,
+		Name:  "Alice Smith",
+		Email: "other@example.com",
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v (err=%v)", status.Code(err), err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestUpdateUser_SameEmail_UpdatesName(t *testing.T) {
+	svc, mock := setupUserService(t)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, email FROM users WHERE id=$1")).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email"}).AddRow(int64(1), testName, testEmail))
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE users SET name=$1, email=$2 WHERE id=$3")).
+		WithArgs("Alice Smith", testEmail, int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	resp, err := svc.UpdateUser(ctxWithEmail(testEmail), &user.UpdateUserRequest{
+		Id:    1,
+		Name:  "Alice Smith",
+		Email: testEmail,
+	})
+	if err != nil {
+		t.Fatalf("UpdateUser: %v", err)
+	}
+	if resp.Name != "Alice Smith" || resp.Email != testEmail {
+		t.Fatalf("unexpected response: %+v", resp)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
 func TestUpdateUser_NotFound_ReturnsNotFound(t *testing.T) {
 	svc, mock := setupUserService(t)
 

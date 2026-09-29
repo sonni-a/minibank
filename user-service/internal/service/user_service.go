@@ -135,8 +135,12 @@ func (s *UserService) UpdateUser(ctx context.Context, req *user.UpdateUserReques
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	if _, err := s.ownUser(ctx, req.Id); err != nil {
+	current, err := s.ownUser(ctx, req.Id)
+	if err != nil {
 		return nil, err
+	}
+	if req.Email != current.Email {
+		return nil, status.Errorf(codes.InvalidArgument, "email cannot be changed")
 	}
 
 	res, err := s.db.ExecContext(ctx, "UPDATE users SET name=$1, email=$2 WHERE id=$3", req.Name, req.Email, req.Id)

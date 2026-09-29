@@ -403,6 +403,26 @@ func TestUpdateMe_InvalidEmail_ReturnsBadRequest(t *testing.T) {
 	}
 }
 
+func TestUpdateMe_EmailChange_ReturnsBadRequest(t *testing.T) {
+	s := newTestServer(
+		&stubAuthClient{},
+		&stubUserClient{getMyUserFn: func(context.Context, *userpb.GetMyUserRequest) (*userpb.UserResponse, error) {
+			return &userpb.UserResponse{Id: 1, Name: "Alice", Email: testEmail}, nil
+		}},
+		&stubPaymentClient{},
+	)
+
+	w := serve(s, http.MethodPut, "/api/v1/me", `{"name":"Alice Smith","email":"other@example.com"}`, map[string]string{
+		"Authorization": bearer,
+	})
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400, body = %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "email cannot be changed") {
+		t.Fatalf("body = %q", w.Body.String())
+	}
+}
+
 func TestDeposit_InvalidAmount_ReturnsBadRequest(t *testing.T) {
 	s := newTestServer(&stubAuthClient{}, &stubUserClient{}, &stubPaymentClient{})
 

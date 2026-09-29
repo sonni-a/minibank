@@ -378,6 +378,10 @@ func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid email format", http.StatusBadRequest)
 		return
 	}
+	if body.Email != meResp.Email {
+		http.Error(w, "email cannot be changed", http.StatusBadRequest)
+		return
+	}
 
 	resp, err := s.user.UpdateUser(ctx, &userpb.UpdateUserRequest{
 		Id:    meResp.Id,
