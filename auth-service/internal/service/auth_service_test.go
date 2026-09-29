@@ -7,11 +7,12 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/lib/pq"
 	miniredis "github.com/alicebob/miniredis/v2"
+	"github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 	"github.com/sonni-a/minibank/api/auth"
 	"github.com/sonni-a/minibank/pkg/jwt"
+	"github.com/sonni-a/minibank/pkg/middleware"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -276,12 +277,28 @@ func TestRefreshToken_Success_ReturnsNewTokens(t *testing.T) {
 	}
 }
 
-func TestDeleteAuthUser_EmptyEmail_ReturnsInvalidArgument(t *testing.T) {
+func ctxWithEmail(email string) context.Context {
+	return context.WithValue(context.Background(), middleware.UserEmailKey, email)
+}
+
+func TestDeleteAuthUser_WithoutToken_ReturnsUnauthenticated(t *testing.T) {
 	svc := &AuthService{}
 
-	_, err := svc.DeleteAuthUser(context.Background(), &auth.DeleteAuthUserRequest{Email: ""})
-	if status.Code(err) != codes.InvalidArgument {
-		t.Fatalf("expected InvalidArgument, got %v (err=%v)", status.Code(err), err)
+	_, err := svc.DeleteAuthUser(context.Background(), &auth.DeleteAuthUserRequest{Email: testEmail})
+	if status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("expected Unauthenticated, got %v (err=%v)", status.Code(err), err)
+	}
+}
+
+func TestDeleteAuthUser_OtherEmail_ReturnsPermissionDenied(t *testing.T) {
+	svc, mock, _ := setupAuthService(t)
+
+	_, err := svc.DeleteAuthUser(ctxWithEmail(testEmail), &auth.DeleteAuthUserRequest{Email: "other@example.com"})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v (err=%v)", status.Code(err), err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
 	}
 }
 
@@ -292,7 +309,7 @@ func TestDeleteAuthUser_UserNotFound_ReturnsNotFound(t *testing.T) {
 		WithArgs(testEmail).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
-	_, err := svc.DeleteAuthUser(context.Background(), &auth.DeleteAuthUserRequest{Email: testEmail})
+	_, err := svc.DeleteAuthUser(ctxWithEmail(testEmail), &auth.DeleteAuthUserRequest{Email: testEmail})
 	if status.Code(err) != codes.NotFound {
 		t.Fatalf("expected NotFound, got %v (err=%v)", status.Code(err), err)
 	}
@@ -303,7 +320,7 @@ func TestDeleteAuthUser_UserNotFound_ReturnsNotFound(t *testing.T) {
 
 func TestDeleteAuthUser_Success_DeletesUserAndCache(t *testing.T) {
 	svc, mock, mr := setupAuthService(t)
-	ctx := context.Background()
+	ctx := ctxWithEmail(testEmail)
 
 	mr.Set("auth:token:"+testEmail, "access")
 	mr.Set("auth:refresh:"+testEmail, "refresh")

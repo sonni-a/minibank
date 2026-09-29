@@ -34,9 +34,7 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.AuthInterceptor(
-			"/user.UserService/CreateUser",
-		)),
+		grpc.UnaryInterceptor(middleware.AuthInterceptor()),
 	)
 	user.RegisterUserServiceServer(grpcServer, userService)
 	reflection.Register(grpcServer)

@@ -39,16 +39,12 @@ func (s *PaymentService) callerUserID(ctx context.Context) (int64, error) {
 }
 
 func (s *PaymentService) CreateAccount(ctx context.Context, req *payment.CreateAccountRequest) (*payment.AccountResponse, error) {
-	var myID int64
-	var err error
-	if req.UserId > 0 {
-		// Gateway registration flow passes a concrete user_id; avoid an extra user-service round-trip.
-		myID = req.UserId
-	} else {
-		myID, err = s.callerUserID(ctx)
-		if err != nil {
-			return nil, err
-		}
+	myID, err := s.callerUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.UserId != 0 && req.UserId != myID {
+		return nil, status.Errorf(codes.PermissionDenied, "user_id does not match authenticated user")
 	}
 
 	err = s.repo.CreateAccount(myID)

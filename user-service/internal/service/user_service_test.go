@@ -61,7 +61,7 @@ func TestCreateUser_DuplicateEmail_ReturnsAlreadyExists(t *testing.T) {
 		WithArgs(testName, testEmail).
 		WillReturnError(&pq.Error{Code: pgUniqueViolation})
 
-	_, err := svc.CreateUser(context.Background(), &user.CreateUserRequest{
+	_, err := svc.CreateUser(ctxWithEmail(testEmail), &user.CreateUserRequest{
 		Name:  testName,
 		Email: testEmail,
 	})
@@ -80,7 +80,7 @@ func TestGetUser_NotFound_ReturnsNotFound(t *testing.T) {
 		WithArgs(int64(42)).
 		WillReturnError(sql.ErrNoRows)
 
-	_, err := svc.GetUser(context.Background(), &user.GetUserRequest{Id: 42})
+	_, err := svc.GetUser(ctxWithEmail(testEmail), &user.GetUserRequest{Id: 42})
 	if status.Code(err) != codes.NotFound {
 		t.Fatalf("expected NotFound, got %v (err=%v)", status.Code(err), err)
 	}
@@ -96,7 +96,7 @@ func TestGetUser_Success_ReturnsUser(t *testing.T) {
 		WithArgs(int64(1)).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email"}).AddRow(int64(1), testName, testEmail))
 
-	resp, err := svc.GetUser(context.Background(), &user.GetUserRequest{Id: 1})
+	resp, err := svc.GetUser(ctxWithEmail(testEmail), &user.GetUserRequest{Id: 1})
 	if err != nil {
 		t.Fatalf("GetUser: %v", err)
 	}
@@ -160,11 +160,11 @@ func TestUpdateUser_InvalidInput_ReturnsInvalidArgument(t *testing.T) {
 func TestUpdateUser_NotFound_ReturnsNotFound(t *testing.T) {
 	svc, mock := setupUserService(t)
 
-	mock.ExpectExec(regexp.QuoteMeta("UPDATE users SET name=$1, email=$2 WHERE id=$3")).
-		WithArgs(testName, testEmail, int64(42)).
-		WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, email FROM users WHERE id=$1")).
+		WithArgs(int64(42)).
+		WillReturnError(sql.ErrNoRows)
 
-	_, err := svc.UpdateUser(context.Background(), &user.UpdateUserRequest{
+	_, err := svc.UpdateUser(ctxWithEmail(testEmail), &user.UpdateUserRequest{
 		Id:    42,
 		Name:  testName,
 		Email: testEmail,
@@ -180,11 +180,11 @@ func TestUpdateUser_NotFound_ReturnsNotFound(t *testing.T) {
 func TestDeleteUser_NotFound_ReturnsNotFound(t *testing.T) {
 	svc, mock := setupUserService(t)
 
-	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM users WHERE id=$1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, email FROM users WHERE id=$1")).
 		WithArgs(int64(42)).
-		WillReturnResult(sqlmock.NewResult(0, 0))
+		WillReturnError(sql.ErrNoRows)
 
-	_, err := svc.DeleteUser(context.Background(), &user.DeleteUserRequest{Id: 42})
+	_, err := svc.DeleteUser(ctxWithEmail(testEmail), &user.DeleteUserRequest{Id: 42})
 	if status.Code(err) != codes.NotFound {
 		t.Fatalf("expected NotFound, got %v (err=%v)", status.Code(err), err)
 	}
@@ -196,16 +196,50 @@ func TestDeleteUser_NotFound_ReturnsNotFound(t *testing.T) {
 func TestDeleteUser_Success_ReturnsMessage(t *testing.T) {
 	svc, mock := setupUserService(t)
 
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, email FROM users WHERE id=$1")).
+		WithArgs(int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email"}).AddRow(int64(1), testName, testEmail))
 	mock.ExpectExec(regexp.QuoteMeta("DELETE FROM users WHERE id=$1")).
 		WithArgs(int64(1)).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	resp, err := svc.DeleteUser(context.Background(), &user.DeleteUserRequest{Id: 1})
+	resp, err := svc.DeleteUser(ctxWithEmail(testEmail), &user.DeleteUserRequest{Id: 1})
 	if err != nil {
 		t.Fatalf("DeleteUser: %v", err)
 	}
 	if resp.Message != "User deleted" {
 		t.Fatalf("message = %q, want User deleted", resp.Message)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestCreateUser_OtherEmail_ReturnsPermissionDenied(t *testing.T) {
+	svc, mock := setupUserService(t)
+
+	_, err := svc.CreateUser(ctxWithEmail("other@example.com"), &user.CreateUserRequest{
+		Name:  testName,
+		Email: testEmail,
+	})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v (err=%v)", status.Code(err), err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestGetUser_OtherUser_ReturnsPermissionDenied(t *testing.T) {
+	svc, mock := setupUserService(t)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, email FROM users WHERE id=$1")).
+		WithArgs(int64(2)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email"}).AddRow(int64(2), "Bob", "bob@example.com"))
+
+	_, err := svc.GetUser(ctxWithEmail(testEmail), &user.GetUserRequest{Id: 2})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v (err=%v)", status.Code(err), err)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet sql expectations: %v", err)

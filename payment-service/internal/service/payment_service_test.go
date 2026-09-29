@@ -68,18 +68,30 @@ func TestCreateAccount_WithoutMetadata_ReturnsUnauthenticated(t *testing.T) {
 }
 
 func TestCreateAccount_WithUserID_Success(t *testing.T) {
-	svc, mock := setupPaymentService(t, 0)
+	svc, mock := setupPaymentService(t, 5)
 
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO accounts (user_id, balance) VALUES ($1, 0)")).
 		WithArgs(int64(5)).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	resp, err := svc.CreateAccount(context.Background(), &payment.CreateAccountRequest{UserId: 5})
+	resp, err := svc.CreateAccount(ctxWithMetadata(), &payment.CreateAccountRequest{UserId: 5})
 	if err != nil {
 		t.Fatalf("CreateAccount: %v", err)
 	}
 	if resp.UserId != 5 || resp.BalanceMinor != 0 {
 		t.Fatalf("unexpected response: %+v", resp)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet sql expectations: %v", err)
+	}
+}
+
+func TestCreateAccount_OtherUserID_ReturnsPermissionDenied(t *testing.T) {
+	svc, mock := setupPaymentService(t, 5)
+
+	_, err := svc.CreateAccount(ctxWithMetadata(), &payment.CreateAccountRequest{UserId: 9})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected PermissionDenied, got %v (err=%v)", status.Code(err), err)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet sql expectations: %v", err)

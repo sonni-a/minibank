@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/sonni-a/minibank/api/auth"
 	"github.com/sonni-a/minibank/pkg/jwt"
+	"github.com/sonni-a/minibank/pkg/middleware"
 	"github.com/sonni-a/minibank/pkg/validate"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -98,11 +99,15 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *auth.RefreshTokenRe
 }
 
 func (s *AuthService) DeleteAuthUser(ctx context.Context, req *auth.DeleteAuthUserRequest) (*auth.DeleteAuthUserResponse, error) {
-	if req.Email == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "email is required")
+	email, ok := ctx.Value(middleware.UserEmailKey).(string)
+	if !ok || email == "" {
+		return nil, status.Errorf(codes.Unauthenticated, "unauthenticated")
+	}
+	if req.Email != email {
+		return nil, status.Errorf(codes.PermissionDenied, "email does not match authenticated user")
 	}
 
-	res, err := s.db.ExecContext(ctx, "DELETE FROM auth_users WHERE email=$1", req.Email)
+	res, err := s.db.ExecContext(ctx, "DELETE FROM auth_users WHERE email=$1", email)
 	if err != nil {
 		slog.Error("DeleteAuthUser db error", "error", err)
 		return nil, status.Errorf(codes.Internal, "internal server error")
@@ -117,7 +122,7 @@ func (s *AuthService) DeleteAuthUser(ctx context.Context, req *auth.DeleteAuthUs
 		return nil, status.Errorf(codes.NotFound, "user not found")
 	}
 
-	_ = s.cache.Del(ctx, "auth:token:"+req.Email, "auth:refresh:"+req.Email).Err()
+	_ = s.cache.Del(ctx, "auth:token:"+email, "auth:refresh:"+email).Err()
 
 	return &auth.DeleteAuthUserResponse{Message: "auth user deleted"}, nil
 }
