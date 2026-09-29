@@ -9,6 +9,7 @@ import (
 
 	"github.com/sonni-a/minibank/api/payment"
 	"github.com/sonni-a/minibank/api/user"
+	paydb "github.com/sonni-a/minibank/payment-service/internal/db"
 	"github.com/sonni-a/minibank/payment-service/internal/repository"
 	"github.com/sonni-a/minibank/payment-service/internal/service"
 	"github.com/sonni-a/minibank/pkg/db"
@@ -26,7 +27,7 @@ func main() {
 	dbConn := db.Connect()
 	defer dbConn.Close()
 
-	migrate.Run(dbConn, "file://payment-service/internal/db/migrations")
+	migrate.Run(dbConn, paydb.FS)
 
 	userAddr := env.Getenv("USER_SERVICE_ADDR", "localhost:50052")
 	userConn, err := grpc.NewClient(userAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))

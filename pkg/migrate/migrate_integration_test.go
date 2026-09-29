@@ -27,8 +27,8 @@ func TestRun_Integration(t *testing.T) {
 		t.Fatalf("ping: %v", err)
 	}
 
-	migrationsPath := filepath.Join("..", "..", "auth-service", "internal", "db", "migrations")
-	Run(dbConn, "file://"+filepath.ToSlash(migrationsPath))
+	dbDir := filepath.Join("..", "..", "auth-service", "internal", "db")
+	Run(dbConn, os.DirFS(dbDir))
 
 	var exists bool
 	err = dbConn.QueryRow(`

@@ -2,22 +2,29 @@ package migrate
 
 import (
 	"database/sql"
+	"io/fs"
 	"log/slog"
 	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
-func Run(dbConn *sql.DB, migrationsPath string) {
+func Run(dbConn *sql.DB, fsys fs.FS) {
 	driver, err := postgres.WithInstance(dbConn, &postgres.Config{})
 	if err != nil {
 		slog.Error("failed to create migrate driver", "error", err)
 		os.Exit(1)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(migrationsPath, "postgres", driver)
+	src, err := iofs.New(fsys, "migrations")
+	if err != nil {
+		slog.Error("failed to read migrations", "error", err)
+		os.Exit(1)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", src, "postgres", driver)
 	if err != nil {
 		slog.Error("failed to create migrate instance", "error", err)
 		os.Exit(1)

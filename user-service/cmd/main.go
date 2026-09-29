@@ -11,6 +11,7 @@ import (
 	"github.com/sonni-a/minibank/pkg/db"
 	"github.com/sonni-a/minibank/pkg/middleware"
 	"github.com/sonni-a/minibank/pkg/migrate"
+	userdb "github.com/sonni-a/minibank/user-service/internal/db"
 	"github.com/sonni-a/minibank/user-service/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -22,7 +23,7 @@ func main() {
 	dbConn := db.Connect()
 	defer dbConn.Close()
 
-	migrate.Run(dbConn, "file://user-service/internal/db/migrations")
+	migrate.Run(dbConn, userdb.FS)
 
 	userService := service.NewUserService(dbConn)
 

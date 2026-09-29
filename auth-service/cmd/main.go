@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/sonni-a/minibank/api/auth"
+	authdb "github.com/sonni-a/minibank/auth-service/internal/db"
 	"github.com/sonni-a/minibank/auth-service/internal/service"
 	"github.com/sonni-a/minibank/pkg/db"
 	"github.com/sonni-a/minibank/pkg/middleware"
@@ -23,7 +24,7 @@ func main() {
 	dbConn := db.Connect()
 	defer dbConn.Close()
 
-	migrate.Run(dbConn, "file://auth-service/internal/db/migrations")
+	migrate.Run(dbConn, authdb.FS)
 
 	rdb := pkgredis.Connect(os.Getenv("REDIS_ADDR"))
 	defer func() {
